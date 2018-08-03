@@ -1,19 +1,18 @@
 <?php
 
-namespace TheAentMachine\AentKubernetes\Kubernetes;
+namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
 use TheAentMachine\Service\Service;
 
-class K8sDeployment extends AbstractK8sObject
+class K8sIngress extends AbstractK8sObject
 {
-
     public static function getKind(): string
     {
-        return 'Deployment';
+        return 'Ingress';
     }
 
     /** @return mixed[] */
-    public static function serializeFromService(Service $service): array
+    public static function serializeFromService(Service $service, ?string $name = null): array
     {
         // TODO: Implement serializeFromService() method.
         return [];

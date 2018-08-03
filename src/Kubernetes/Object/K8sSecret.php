@@ -1,6 +1,6 @@
 <?php
 
-namespace TheAentMachine\AentKubernetes\Kubernetes;
+namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
 use TheAentMachine\Service\Enum\EnvVariableTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
@@ -13,7 +13,7 @@ class K8sSecret extends AbstractK8sObject
         return 'Secret';
     }
 
-    public static function serializeFromService(Service $service): array
+    public static function serializeFromService(Service $service, ?string $name = null): array
     {
         $secrets = [];
 
@@ -24,14 +24,20 @@ class K8sSecret extends AbstractK8sObject
             }
         }
 
-        $name = $service->getServiceName() . '-' . strtolower(self::getKind());
-        $array = self::baseSerialize($name);
+        $name = $name ?? $service->getServiceName() . '-secrets';
+        $res = [
+            'apiVersion' => self::getApiVersion(),
+            'kind' => self::getKind(),
+            'metadata' => [
+                'name' => $name
+            ]
+        ];
 
         /** @var EnvVariable $envVar */
         foreach ($secrets as $key => $envVar) {
-            $array['stringData'][$key] = $envVar->getValue();
+            $res['stringData'][$key] = $envVar->getValue();
         }
 
-        return $array;
+        return $res;
     }
 }

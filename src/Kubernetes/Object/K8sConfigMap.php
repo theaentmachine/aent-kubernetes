@@ -1,6 +1,6 @@
 <?php
 
-namespace TheAentMachine\AentKubernetes\Kubernetes;
+namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
 use TheAentMachine\Service\Enum\EnvVariableTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
@@ -13,7 +13,7 @@ class K8sConfigMap extends AbstractK8sObject
         return 'ConfigMap';
     }
 
-    public static function serializeFromService(Service $service): array
+    public static function serializeFromService(Service $service, ?string $name = null): array
     {
         $sharedEnvVars = [];
 
@@ -24,14 +24,20 @@ class K8sConfigMap extends AbstractK8sObject
             }
         }
 
-        $name = $service->getServiceName() . '-' . strtolower(self::getKind());
-        $array = self::baseSerialize($name);
+        $name = $name ?? $service->getServiceName() . '-configMap';
+        $res = [
+            'apiVersion' => self::getApiVersion(),
+            'kind' => self::getKind(),
+            'metadata' => [
+                'name' => $name
+            ]
+        ];
 
         /** @var EnvVariable $envVar */
         foreach ($sharedEnvVars as $key => $envVar) {
-            $array['data'][$key] = $envVar->getValue();
+            $res['data'][$key] = $envVar->getValue();
         }
 
-        return $array;
+        return $res;
     }
 }
