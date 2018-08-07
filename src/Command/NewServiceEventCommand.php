@@ -94,24 +94,18 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             YamlTools::mergeContentIntoFile($secretArray, $filename);
         }
 
-        if ($service->getNeedVirtualHost()) {
+        // Ingress
+        if (count($virtualHosts = $service->getVirtualHosts()) > 0) {
             $ingressFilename = $k8sServiceDir->getPath() . '/' . K8sIngress::getKind() . '.yml';
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
-            if (empty($virtualHosts = $service->getVirtualHosts())) {
-                $host = $this->askForHost($serviceName, null);
-                $port = $this->askForPort($serviceName, $host);
-                // TODO: ask about a comment
-                $tmpService->addVirtualHost($host, $port, null);
-            } else {
-                foreach ($virtualHosts as $virtualHost) {
-                    $port = (int)$virtualHost['port'];
-                    $host = $virtualHost['host'] ?? null;
-                    if (null === $host) {
-                        $host = $this->askForHost($serviceName, $port);
-                    }
-                    $tmpService->addVirtualHost((string)$host, $port, null);
+            foreach ($virtualHosts as $virtualHost) {
+                $port = (int)$virtualHost['port'];
+                $host = $virtualHost['host'] ?? null;
+                if (null === $host) {
+                    $host = $this->askForHost($serviceName, $port);
                 }
+                $tmpService->addVirtualHost((string)$host, $port, null);
             }
             YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService), $ingressFilename);
         }
@@ -120,30 +114,12 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         return null;
     }
 
-
-    private function askForHost(string $serviceName, ?int $port = null): string
+    private function askForHost(string $serviceName, int $port): string
     {
-        $question = "What is the domain name of your service <info>$serviceName</info>";
-        $question .= null === $port ? '?' : " (port <info>$port</info>)?";
+        $question = "What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ";
         return $this->getAentHelper()->question($question)
             ->compulsory()
             ->setValidator(CommonValidators::getDomainNameValidator())
-            ->ask();
-    }
-
-    private function askForPort(string $serviceName, string $host, int $default = 80): int
-    {
-        $question = "Which port for the domain name <info>$host</info> of your service <info>$serviceName</info>?";
-        return (int)$this->getAentHelper()->question($question)
-            ->compulsory()
-            ->setDefault((string)$default)
-            ->setValidator(function (string $value) {
-                $value = trim($value);
-                if (!\is_numeric($value)) {
-                    throw new \InvalidArgumentException("Invalid integer $value");
-                }
-                return $value;
-            })
             ->ask();
     }
 }
