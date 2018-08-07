@@ -10,12 +10,17 @@
       "homepage": "https://github.com/JinTotonic"
     }
   ],
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/theaentmachine/aent-console"
+    }
+  ],
   "require": {
     "php": ">=7.1",
-    "symfony/yaml": "^4.0",
     "symfony/process": "^4.1",
     "symfony/finder": "^4.1",
-    "theaentmachine/aent-console": "^1",
+    "theaentmachine/aent-console": "dev-master",
     "symfony/filesystem": "^4.1"
   },
   "require-dev": {

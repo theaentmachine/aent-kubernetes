@@ -3,6 +3,7 @@
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
 use TheAentMachine\Service\Service;
+use TheAentMachine\Yaml\CommentedItem;
 
 class K8sService extends AbstractK8sObject
 {
@@ -16,11 +17,11 @@ class K8sService extends AbstractK8sObject
     {
         $ports = [];
         foreach ($service->getPorts() as $port) {
-            $ports[] = [
+            $ports[] = new CommentedItem([
                 'name' => 'http',
                 'port' => $port['source'],
                 'targetPort' => $port['target'],
-            ];
+            ], (string)$port['comment']);
         }
 
         $name = $name ?? $service->getServiceName();
