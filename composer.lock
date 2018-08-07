@@ -744,12 +744,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/theaentmachine/aent-console.git",
-                "reference": "79ba12390c325639f741eb4d07f222ab78f8540b"
+                "reference": "8b1de7cd05b1a26e9bc5b18a2c500501d5d2d8ea"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/theaentmachine/aent-console/zipball/79ba12390c325639f741eb4d07f222ab78f8540b",
-                "reference": "79ba12390c325639f741eb4d07f222ab78f8540b",
+                "url": "https://api.github.com/repos/theaentmachine/aent-console/zipball/8b1de7cd05b1a26e9bc5b18a2c500501d5d2d8ea",
+                "reference": "8b1de7cd05b1a26e9bc5b18a2c500501d5d2d8ea",
                 "shasum": ""
             },
             "require": {
@@ -780,30 +780,7 @@
                     "TheAentMachine\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "TheAentMachine\\": "tests/"
-                }
-            },
-            "scripts": {
-                "ci": [
-                    "@cs-check",
-                    "@phpstan",
-                    "@phpunit"
-                ],
-                "cs-fix": [
-                    "phpcbf"
-                ],
-                "cs-check": [
-                    "phpcs"
-                ],
-                "phpstan": [
-                    "phpstan analyse src -c phpstan.neon --level=7 --no-progress -vvv"
-                ],
-                "phpunit": [
-                    "phpunit"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -826,11 +803,7 @@
             ],
             "description": "A utility PHP package to create aents using Symfony console.",
             "homepage": "https://github.com/theaentmachine/aent-console",
-            "support": {
-                "source": "https://github.com/theaentmachine/aent-console/tree/master",
-                "issues": "https://github.com/theaentmachine/aent-console/issues"
-            },
-            "time": "2018-08-06T16:07:46+00:00"
+            "time": "2018-08-07T09:24:59+00:00"
         }
     ],
     "packages-dev": [

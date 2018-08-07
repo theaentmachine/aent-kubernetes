@@ -6,6 +6,7 @@ use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
 use TheAentMachine\AentKubernetes\Kubernetes\KubernetesServiceDirectory;
+use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sDeployment;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
@@ -78,29 +79,38 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             YamlTools::mergeContentIntoFile($secretArray, $filename);
         }
 
+        // ConfigMap
+        if (count($service->getAllSharedEnvVariable()) > 0) {
+            $configMapName = $serviceName . '-configMap';
+            $newContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
+                [
+                    'configMapRef' => $configMapName,
+                ]
+            ]]]]]]];
+            YamlTools::mergeContentIntoFile($newContent, $deploymentFilename);
+
+            $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
+            $filename = $k8sServiceDir->getPath() . '/' . K8sConfigMap::getKind() . '.yml';
+            YamlTools::mergeContentIntoFile($secretArray, $filename);
+        }
+
         if ($service->getNeedVirtualHost()) {
             $ingressFilename = $k8sServiceDir->getPath() . '/' . K8sIngress::getKind() . '.yml';
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
             if (empty($virtualHosts = $service->getVirtualHosts())) {
-                do {
-                    $host = $this->askForHost($serviceName, null);
-                    $port = $this->askForPort($serviceName, $host);
-                    // TODO: ask question about comments
-                    $tmpService->addVirtualHost($host, $port, null);
-                    $addAnotherVirtualHost = $this->getAentHelper()->question('Do you want to add another virtual host?')
-                        ->yesNoQuestion()
-                        ->setDefault('n')
-                        ->ask();
-                } while ($addAnotherVirtualHost);
+                $host = $this->askForHost($serviceName, null);
+                $port = $this->askForPort($serviceName, $host);
+                // TODO: ask about a comment
+                $tmpService->addVirtualHost($host, $port, null);
             } else {
                 foreach ($virtualHosts as $virtualHost) {
-                    $port = $virtualHost['port'];
+                    $port = (int)$virtualHost['port'];
                     $host = $virtualHost['host'] ?? null;
                     if (null === $host) {
-                        $host = $this->askForHost($serviceName, null);
+                        $host = $this->askForHost($serviceName, $port);
                     }
-                    $tmpService->addVirtualHost((string)$host, (int)$port, null);
+                    $tmpService->addVirtualHost((string)$host, $port, null);
                 }
             }
             YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService), $ingressFilename);
@@ -114,19 +124,19 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
     private function askForHost(string $serviceName, ?int $port = null): string
     {
         $question = "What is the domain name of your service <info>$serviceName</info>";
-        $question .= null === $port ? '?' : " (port: <info>$port</info>)?";
+        $question .= null === $port ? '?' : " (port <info>$port</info>)?";
         return $this->getAentHelper()->question($question)
             ->compulsory()
             ->setValidator(CommonValidators::getDomainNameValidator())
             ->ask();
     }
 
-    private function askForPort(string $serviceName, string $host): int
+    private function askForPort(string $serviceName, string $host, int $default = 80): int
     {
         $question = "Which port for the domain name <info>$host</info> of your service <info>$serviceName</info>?";
         return (int)$this->getAentHelper()->question($question)
             ->compulsory()
-            ->setDefault('80')
+            ->setDefault((string)$default)
             ->setValidator(function (string $value) {
                 $value = trim($value);
                 if (!\is_numeric($value)) {
