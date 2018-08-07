@@ -105,7 +105,11 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 if (null === $host) {
                     $host = $this->askForHost($serviceName, $port);
                 }
-                $tmpService->addVirtualHost((string)$host, $port, null);
+                $comment = $virtualHost['comment'] ?? null;
+                if ($comment !== null) {
+                    $comment = (string) $comment;
+                }
+                $tmpService->addVirtualHost((string)$host, $port, $comment);
             }
             YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService), $ingressFilename);
         }
