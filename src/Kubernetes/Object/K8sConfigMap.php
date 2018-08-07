@@ -5,6 +5,7 @@ namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 use TheAentMachine\Service\Enum\EnvVariableTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
 use TheAentMachine\Service\Service;
+use TheAentMachine\Yaml\CommentedItem;
 
 class K8sConfigMap extends AbstractK8sObject
 {
@@ -35,7 +36,7 @@ class K8sConfigMap extends AbstractK8sObject
 
         /** @var EnvVariable $envVar */
         foreach ($sharedEnvVars as $key => $envVar) {
-            $res['data'][$key] = $envVar->getValue();
+            $res['data'][$key] = new CommentedItem($envVar->getValue(), $envVar->getComment());
         }
 
         return $res;

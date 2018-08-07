@@ -5,6 +5,7 @@ namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 use TheAentMachine\Service\Enum\EnvVariableTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
 use TheAentMachine\Service\Service;
+use TheAentMachine\Yaml\CommentedItem;
 
 class K8sSecret extends AbstractK8sObject
 {
@@ -19,6 +20,7 @@ class K8sSecret extends AbstractK8sObject
 
         /** @var EnvVariable $envVar */
         foreach ($service->getEnvironment() as $key => $envVar) {
+            // get only shared secrets
             if ($envVar->getType() === EnvVariableTypeEnum::SHARED_SECRET) {
                 $secrets[$key] = $envVar;
             }
@@ -35,7 +37,7 @@ class K8sSecret extends AbstractK8sObject
 
         /** @var EnvVariable $envVar */
         foreach ($secrets as $key => $envVar) {
-            $res['stringData'][$key] = $envVar->getValue();
+            $res['stringData'][$key] = new CommentedItem($envVar->getValue(), $envVar->getComment());
         }
 
         return $res;

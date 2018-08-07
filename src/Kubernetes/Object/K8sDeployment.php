@@ -4,6 +4,7 @@ namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
 use TheAentMachine\Service\Environment\EnvVariable;
 use TheAentMachine\Service\Service;
+use TheAentMachine\Yaml\CommentedItem;
 
 class K8sDeployment extends AbstractK8sObject
 {
@@ -26,10 +27,10 @@ class K8sDeployment extends AbstractK8sObject
         $imageEnvVars = [];
         foreach ($service->getAllImageEnvVariable() as $key => $envVar) {
             /** @var EnvVariable $envVar */
-            $imageEnvVars[] = [
+            $imageEnvVars[] = new CommentedItem([
                 'name' => $key,
                 'value' => $envVar->getValue()
-            ];
+            ], $envVar->getComment());
         }
 
         // Only 1 for the moment
