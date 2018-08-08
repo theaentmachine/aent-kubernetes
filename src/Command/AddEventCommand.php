@@ -65,7 +65,7 @@ class AddEventCommand extends AbstractEventCommand
             ->ask();
         $aentHelper->spacer();
 
-        Manifest::addMetadata('BASE_DOMAIN_NAME' ,$baseDomainName);
+        Manifest::addMetadata('BASE_DOMAIN_NAME', $baseDomainName);
 
         $CIAentID = $aentHelper->getCommonQuestions()->askForCI();
         if (null !== $CIAentID) {
