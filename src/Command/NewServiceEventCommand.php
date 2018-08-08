@@ -14,8 +14,10 @@ use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
 use TheAentMachine\Question\CommonValidators;
+use TheAentMachine\Service\Enum\VolumeTypeEnum;
 use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
+use TheAentMachine\Service\Volume\Volume;
 use TheAentMachine\YamlTools\YamlTools;
 
 class NewServiceEventCommand extends AbstractJsonEventCommand
@@ -174,6 +176,15 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             }
             YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService), $ingressFilename);
         }
+
+        // PVC
+        $bindVolumes = array_filter($service->getVolumes(), function (Volume $v) {
+            return $v->getType() === VolumeTypeEnum::BIND_VOLUME;
+        });
+        if ($bindVolumes) {
+            // TODO
+        }
+
 
         $this->output->writeln("Service <info>$serviceName</info> has been successfully added in <info>$k8sDirName</info>!");
         return null;
