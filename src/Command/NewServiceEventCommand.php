@@ -2,6 +2,7 @@
 
 namespace TheAentMachine\AentKubernetes\Command;
 
+use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
@@ -98,13 +99,11 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         YamlTools::mergeContentIntoFile($serviceArray, $filePath);
 
         // Secret
-        if (!empty($service->getAllSharedSecret())) {
-            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, true);
+        $allSharedSecrets = $service->getAllSharedSecret();
+        if (!empty($allSharedSecrets)) {
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, $allSharedSecrets);
             foreach ($sharedSecretsMap as $containerId => $sharedSecrets) {
-                $secretObjName = 'default-secrets';
-                if ($containerId !== '') {
-                    $secretObjName = "secrets-$containerId";
-                }
+                $secretObjName = K8sUtils::getSecretName($containerId);
                 $tmpService = new Service();
                 $tmpService->setServiceName($serviceName);
                 /** @var SharedEnvVariable $secret */
@@ -114,25 +113,15 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $secretArray = K8sSecret::serializeFromService($tmpService, $secretObjName);
                 $filePath = \dirname($k8sServiceDir->getPath()) . '/' . $secretObjName . '.yml';
                 YamlTools::mergeContentIntoFile($secretArray, $filePath);
-
-                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                    [
-                        'secretFrom' => $secretObjName,
-                        'optional' => false
-                    ]
-                ]]]]]]];
-                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
             }
         }
 
         // ConfigMap
-        if (!empty($service->getAllSharedEnvVariable())) {
-            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, true);
+        $allSharedEnvVars = $service->getAllSharedEnvVariable();
+        if (!empty($allSharedEnvVars)) {
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, $allSharedEnvVars);
             foreach ($sharedSecretsMap as $containerId => $sharedEnvVars) {
-                $configMapName = 'default-configMap';
-                if ($containerId !== '') {
-                    $configMapName = "configMap-$containerId";
-                }
+                $configMapName = K8sUtils::getConfigMapName($containerId);
                 $tmpService = new Service();
                 $tmpService->setServiceName($serviceName);
                 /** @var SharedEnvVariable $sharedEnvVar */
@@ -142,27 +131,27 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
                 $filePath = \dirname($k8sServiceDir->getPath()) . '/' . $configMapName . '.yml';
                 YamlTools::mergeContentIntoFile($secretArray, $filePath);
-
-                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                    [
-                        'configMapRef' => $configMapName,
-                    ]
-                ]]]]]]];
-                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
             }
         }
 
         // Ingress
         if (!empty($virtualHosts = $service->getVirtualHosts())) {
+            $baseDomainName = Aenthill::metadata('BASE_DOMAIN_NAME');
+
             $ingressFilename = $k8sServiceDir->getPath() . '/ingress.yml';
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
             foreach ($virtualHosts as $virtualHost) {
                 $port = (int)$virtualHost['port'];
                 $host = $virtualHost['host'] ?? null;
+                $hostPrefix = $virtualHost['hostPrefix'] ?? null;
+                if ($hostPrefix !== null) {
+                    $host = $hostPrefix.$baseDomainName;
+                }
                 if (null === $host) {
                     $host = $this->getAentHelper()->question("What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ")
                         ->compulsory()
+                        ->setDefault($serviceName.$baseDomainName)
                         ->setValidator(CommonValidators::getDomainNameValidator())
                         ->ask();
                 }

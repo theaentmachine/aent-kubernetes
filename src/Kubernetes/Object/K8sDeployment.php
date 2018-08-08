@@ -2,7 +2,9 @@
 
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
+use TheAentMachine\AentKubernetes\Kubernetes\K8sUtils;
 use TheAentMachine\Service\Environment\EnvVariable;
+use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
 use TheAentMachine\Yaml\CommentedItem;
 
@@ -51,6 +53,33 @@ class K8sDeployment extends AbstractK8sObject
             ]
         ]);
 
+        $sharedSecrets = $service->getAllSharedSecret();
+        if ($sharedSecrets) {
+            $secretNames = array_values(array_map(function (SharedEnvVariable $secret) {
+                return K8sUtils::getSecretName($secret->getContainerId());
+            }, $sharedSecrets));
+            $secretNames = \array_unique($secretNames);
+            $container['envFrom'] = array_map(function (string $containerId) {
+                return [
+                'secretFrom' => $containerId,
+                'optional' => false
+                ];
+            }, $secretNames);
+        }
+
+        $sharedEnvVars = $service->getAllSharedEnvVariable();
+        if ($sharedEnvVars) {
+            $configMapNames = array_values(array_map(function (SharedEnvVariable $envVariable) {
+                return K8sUtils::getConfigMapName($envVariable->getContainerId());
+            }, $sharedEnvVars));
+            $configMapNames = \array_unique($configMapNames);
+            $container['envFrom'] = array_merge($container['envFrom'], array_map(function (string $containerId) {
+                return [
+                'configMapRef' => $containerId
+                ];
+            }, $configMapNames));
+        }
+
         $initContainers = [];
         foreach ($service->getDependsOn() as $n) {
             $initContainers[] = [
@@ -77,19 +106,19 @@ class K8sDeployment extends AbstractK8sObject
                 'matchLabels' => [
                     'app' => $serviceName,
                 ],
-                'template' => [
-                    'metadata' => [
-                        'labels' => [
-                            'app' => $serviceName
-                        ]
-                    ],
-                    'spec' => array_filter([
-                        'initContainers' => $initContainers,
-                        'containers' => [
-                            $container,
-                        ]
-                    ])
-                ]
+            ],
+            'template' => [
+                'metadata' => [
+                    'labels' => [
+                        'app' => $serviceName
+                    ]
+                ],
+                'spec' => array_filter([
+                    'initContainers' => $initContainers,
+                    'containers' => [
+                        $container,
+                    ]
+                ])
             ]
         ];
 
