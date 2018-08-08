@@ -50,6 +50,23 @@ class AddEventCommand extends AbstractEventCommand
         $this->output->writeln("☸️ Kubernetes folder <info>$dirName</info> has been successfully created!");
         $aentHelper->spacer();
 
+        $baseDomainName = $aentHelper->question('What is the base domain name of your environment?')
+            ->setDefault('.test.localhost')
+            ->setHelpText('By default, all hosts in Ingress will be created using the base domain name as a starting point.')
+            ->compulsory()
+            ->setValidator(function (string $value) {
+                $value = trim($value);
+                if (!\preg_match('/^\.(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/im', $value)) {
+                    throw new \InvalidArgumentException('Invalid value "' . $value .
+                        '". Hint: the base domain name must start with a dot (.). For instance: ".foobar.com" is a valid base domain name.');
+                }
+                return $value;
+            })
+            ->ask();
+        $aentHelper->spacer();
+
+        Manifest::addMetadata('BASE_DOMAIN_NAME', $baseDomainName);
+
         $CIAentID = $aentHelper->getCommonQuestions()->askForCI();
         if (null !== $CIAentID) {
             Aenthill::run($CIAentID, CommonEvents::ADD_EVENT);

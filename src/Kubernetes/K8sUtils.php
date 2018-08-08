@@ -10,13 +10,12 @@ class K8sUtils
 
     /**
      * @param Service $service
-     * @param bool $mapSharedSecrets
+     * @param array<string,SharedEnvVariable> $sharedEnvVars
      * @return array<string, array<string, SharedEnvVariable>>
      */
-    public static function mapSharedEnvVarsByContainerId(Service $service, bool $mapSharedSecrets = false): array
+    public static function mapSharedEnvVarsByContainerId(Service $service, array $sharedEnvVars): array
     {
         $res = [];
-        $sharedEnvVars = $mapSharedSecrets ? $service->getAllSharedEnvVariable() : $service->getAllSharedSecret();
         /**
          * @var string $key
          * @var SharedEnvVariable $envVar
@@ -70,5 +69,23 @@ class K8sUtils
             }
             return $value;
         };
+    }
+
+    public static function getConfigMapName(?string $containerId): string
+    {
+        $configMapName = 'default-configMap';
+        if ($containerId) {
+            $configMapName = "configMap-$containerId";
+        }
+        return $configMapName;
+    }
+
+    public static function getSecretName(?string $containerId): string
+    {
+        $secretObjName = 'default-secrets';
+        if ($containerId) {
+            $secretObjName = "secrets-$containerId";
+        }
+        return $secretObjName;
     }
 }
