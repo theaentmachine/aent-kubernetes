@@ -4,15 +4,41 @@ namespace TheAentMachine\AentKubernetes\Kubernetes;
 
 use TheAentMachine\Helper\AentHelper;
 use TheAentMachine\Question\CommonValidators;
+use TheAentMachine\Service\Environment\SharedEnvVariable;
+use TheAentMachine\Service\Service;
 
 class K8sHelper
 {
+    public const NULL_CONTAINER_ID_KEY = 'null___container___id___key___foo';
+
     /** @var AentHelper */
     private $aentHelper;
 
     public function __construct(AentHelper $aentHelper)
     {
         $this->aentHelper = $aentHelper;
+    }
+
+    /**
+     * @param Service $service
+     * @param bool $mapSharedSecrets
+     * @return array<string, array<string, EnvVariable>>
+     */
+    public function mapSharedEnvVarsByContainerId(Service $service, bool $mapSharedSecrets = false): array
+    {
+        $res = [];
+        $sharedEnvVars = $mapSharedSecrets ? $service->getAllSharedEnvVariable() : $service->getAllSharedSecret();
+        /**
+         * @var string $key
+         * @var SharedEnvVariable $envVar
+         */
+        foreach ($sharedEnvVars as $key => $envVar) {
+            if (null === $containerId = $envVar->getContainerId()) {
+                $containerId = self::NULL_CONTAINER_ID_KEY;
+            }
+            $res[$containerId][$key] = $envVar;
+        }
+        return $res;
     }
 
     public function askForHost(string $serviceName, int $port): string
@@ -75,7 +101,7 @@ class K8sHelper
             if (!\preg_match('/^(\d+[.])?\d+[m]?$/', $value)) {
                 throw new \InvalidArgumentException("Invalid value \"$value\"." . PHP_EOL
                     . 'Hint: The CPU resource is measured in cpu units. Fractional values are allowed.' . PHP_EOL
-                    . 'You can use the suffix m to mean mili. For example 100m cpu is 100 milicpu, and is the same as 0.1 cpu.'  . PHP_EOL
+                    . 'You can use the suffix m to mean mili. For example 100m cpu is 100 milicpu, and is the same as 0.1 cpu.' . PHP_EOL
                     . 'One cpu, in Kubernetes, is equivalent to 1 AWS vCPU, 1 GCP Core, 1 Azure vCore or 1 Hyperthread on a bare-metal Intel processor with Hyperthreading.');
             }
             return $value;

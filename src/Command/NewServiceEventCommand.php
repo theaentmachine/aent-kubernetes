@@ -13,6 +13,7 @@ use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
+use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
 use TheAentMachine\YamlTools\YamlTools;
 
@@ -77,38 +78,66 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         YamlTools::mergeContentIntoFile($serviceArray, $filename);
 
         // Secret
-        if (count($service->getAllSharedSecret()) > 0) {
-            $secretObjName = $serviceName . '-secrets';
-            $newContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                [
-                    'secretFrom' => $secretObjName,
-                    'optional' => false
-                ]
-            ]]]]]]];
-            YamlTools::mergeContentIntoFile($newContent, $deploymentFilename);
+        if (!empty($service->getAllSharedSecret())) {
+            $sharedSecretsMap = $k8sHelper->mapSharedEnvVarsByContainerId($service, true);
+            foreach ($sharedSecretsMap as $containerId => $sharedSecrets) {
+                $secretObjName = 'default-secrets';
+                $subFilename = K8sSecret::getKind();
+                if ($containerId !== K8sHelper::NULL_CONTAINER_ID_KEY) {
+                    $secretObjName = "secrets-$containerId";
+                    $subFilename .= "-$containerId";
+                }
+                $tmpService = new Service();
+                $tmpService->setServiceName($serviceName);
+                /** @var SharedEnvVariable $secret */
+                foreach ($sharedSecrets as $key => $secret) {
+                    $tmpService->addSharedSecret($key, $secret->getValue(), $secret->getComment(), $secret->getContainerId());
+                }
+                $secretArray = K8sSecret::serializeFromService($tmpService, $secretObjName);
+                $filename = \dirname($k8sServiceDir->getPath()) . '/' . $subFilename . '.yml';
+                YamlTools::mergeContentIntoFile($secretArray, $filename);
 
-            $secretArray = K8sSecret::serializeFromService($service, $secretObjName);
-            $filename = $k8sServiceDir->getPath() . '/' . K8sSecret::getKind() . '.yml';
-            YamlTools::mergeContentIntoFile($secretArray, $filename);
+                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
+                    [
+                        'secretFrom' => $secretObjName,
+                        'optional' => false
+                    ]
+                ]]]]]]];
+                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
+            }
         }
 
         // ConfigMap
-        if (count($service->getAllSharedEnvVariable()) > 0) {
-            $configMapName = $serviceName . '-configMap';
-            $newContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                [
-                    'configMapRef' => $configMapName,
-                ]
-            ]]]]]]];
-            YamlTools::mergeContentIntoFile($newContent, $deploymentFilename);
+        if (!empty($service->getAllSharedEnvVariable())) {
+            $sharedSecretsMap = $k8sHelper->mapSharedEnvVarsByContainerId($service, true);
+            foreach ($sharedSecretsMap as $containerId => $sharedEnvVars) {
+                $configMapName = 'default-configMap';
+                $subFilename = K8sConfigMap::getKind();
+                if ($containerId !== K8sHelper::NULL_CONTAINER_ID_KEY) {
+                    $configMapName = "configMap-$containerId";
+                    $subFilename .= "-$containerId";
+                }
+                $tmpService = new Service();
+                $tmpService->setServiceName($serviceName);
+                /** @var SharedEnvVariable $sharedEnvVar */
+                foreach ($sharedEnvVars as $key => $sharedEnvVar) {
+                    $tmpService->addSharedEnvVariable($key, $sharedEnvVar->getValue(), $sharedEnvVar->getComment(), $sharedEnvVar->getContainerId());
+                }
+                $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
+                $filename = \dirname($k8sServiceDir->getPath()) . '/' . $subFilename . '.yml';
+                YamlTools::mergeContentIntoFile($secretArray, $filename);
 
-            $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
-            $filename = $k8sServiceDir->getPath() . '/' . K8sConfigMap::getKind() . '.yml';
-            YamlTools::mergeContentIntoFile($secretArray, $filename);
+                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
+                    [
+                        'configMapRef' => $configMapName,
+                    ]
+                ]]]]]]];
+                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
+            }
         }
 
         // Ingress
-        if (count($virtualHosts = $service->getVirtualHosts()) > 0) {
+        if (!empty($virtualHosts = $service->getVirtualHosts())) {
             $ingressFilename = $k8sServiceDir->getPath() . '/' . K8sIngress::getKind() . '.yml';
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
