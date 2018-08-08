@@ -2,7 +2,6 @@
 
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
-use TheAentMachine\Service\Enum\EnvVariableTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
 use TheAentMachine\Service\Service;
 use TheAentMachine\Yaml\CommentedItem;
@@ -16,15 +15,6 @@ class K8sSecret extends AbstractK8sObject
 
     public static function serializeFromService(Service $service, ?string $name = null): array
     {
-        $secrets = [];
-
-        /** @var EnvVariable $envVar */
-        foreach ($service->getEnvironment() as $key => $envVar) {
-            // get only shared secrets
-            if ($envVar->getType() === EnvVariableTypeEnum::SHARED_SECRET) {
-                $secrets[$key] = $envVar;
-            }
-        }
 
         $name = $name ?? $service->getServiceName() . '-secrets';
         $res = [
@@ -36,7 +26,7 @@ class K8sSecret extends AbstractK8sObject
         ];
 
         /** @var EnvVariable $envVar */
-        foreach ($secrets as $key => $envVar) {
+        foreach ($service->getAllSharedSecret() as $key => $envVar) {
             $res['stringData'][$key] = new CommentedItem($envVar->getValue(), $envVar->getComment());
         }
 

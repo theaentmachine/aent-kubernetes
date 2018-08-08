@@ -5,7 +5,7 @@ COPY composer.lock composer.lock
 
 RUN composer install --no-dev
 
-FROM theaentmachine/base-php-aent:0.0.17
+FROM theaentmachine/base-php-aent:0.0.19
 
 # Copies our aent entry point.
 COPY aent.sh /usr/bin/aent
