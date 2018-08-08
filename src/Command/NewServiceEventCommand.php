@@ -5,6 +5,7 @@ namespace TheAentMachine\AentKubernetes\Command;
 use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
+use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\AentKubernetes\Kubernetes\KubernetesServiceDirectory;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sDeployment;
@@ -12,7 +13,6 @@ use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
-use TheAentMachine\Question\CommonValidators;
 use TheAentMachine\Service\Service;
 use TheAentMachine\YamlTools\YamlTools;
 
@@ -37,6 +37,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         if (!$service->isForMyEnvType()) {
             return null;
         }
+        $k8sHelper = new K8sHelper($this->getAentHelper());
 
         $k8sDirName = Manifest::mustGetMetadata(CommonMetadata::KUBERNETES_DIRNAME_KEY);
         $this->getAentHelper()->title('Kubernetes: adding/updating a service');
@@ -54,6 +55,18 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
 
 
         // Deployment
+        if (null === $service->getRequestMemory()) {
+            $service->setRequestMemory($k8sHelper->askForMemory($serviceName, true));
+        }
+        if (null === $service->getRequestCpu()) {
+            $service->setRequestCpu($k8sHelper->askForCpu($serviceName, true));
+        }
+        if (null === $service->getLimitMemory()) {
+            $service->setLimitMemory($k8sHelper->askForMemory($serviceName, false));
+        }
+        if (null === $service->getLimitCpu()) {
+            $service->setLimitCpu($k8sHelper->askForCpu($serviceName, false));
+        }
         $deploymentArray = K8sDeployment::serializeFromService($service, $serviceName);
         $deploymentFilename = $k8sServiceDir->getPath() . '/' . K8sDeployment::getKind() . '.yml';
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
@@ -103,11 +116,11 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $port = (int)$virtualHost['port'];
                 $host = $virtualHost['host'] ?? null;
                 if (null === $host) {
-                    $host = $this->askForHost($serviceName, $port);
+                    $host = $k8sHelper->askForHost($serviceName, $port);
                 }
                 $comment = $virtualHost['comment'] ?? null;
                 if ($comment !== null) {
-                    $comment = (string) $comment;
+                    $comment = (string)$comment;
                 }
                 $tmpService->addVirtualHost((string)$host, $port, $comment);
             }
@@ -116,14 +129,5 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
 
         $this->output->writeln("Service <info>$serviceName</info> has been successfully added in <info>$k8sDirName</info>!");
         return null;
-    }
-
-    private function askForHost(string $serviceName, int $port): string
-    {
-        $question = "What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ";
-        return $this->getAentHelper()->question($question)
-            ->compulsory()
-            ->setValidator(CommonValidators::getDomainNameValidator())
-            ->ask();
     }
 }

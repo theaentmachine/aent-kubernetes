@@ -19,7 +19,9 @@ class K8sDeployment extends AbstractK8sObject
         return 'extensions/v1beta';
     }
 
-    /** @return mixed[] */
+    /** @return mixed[]
+     * @throws \TheAentMachine\Service\Exception\ServiceException
+     */
     public static function serializeFromService(Service $service, ?string $name = null): array
     {
         $serviceName = $name ?? $service->getServiceName();
@@ -38,7 +40,27 @@ class K8sDeployment extends AbstractK8sObject
             'name' => $serviceName,
             'image' => $service->getImage(),
             'env' => $imageEnvVars,
+            'imagePullPolicy' => 'Always',
+            'resources' => [
+                'requests' => [
+                    'memory' => $service->getRequestMemory(),
+                    'cpu' => $service->getRequestCpu(),
+                ],
+                'limits' => [
+                    'memory' => $service->getLimitMemory(),
+                    'cpu' => $service->getLimitCpu(),
+                ]
+            ]
         ]);
+
+        $initContainers = [];
+        foreach ($service->getDependsOn() as $n) {
+            $initContainers[] = [
+                'name' => "init-$n",
+                'image' => $n,
+                'command' => ['sh', '-c', "until nslookup $n; do echo waiting for $n; sleep 2; done;"]
+            ];
+        }
 
         $res = [
             'apiVersion' => self::getApiVersion(),
@@ -63,11 +85,12 @@ class K8sDeployment extends AbstractK8sObject
                             'app' => $serviceName
                         ]
                     ],
-                    'spec' => [
+                    'spec' => array_filter([
+                        'initContainers' => $initContainers,
                         'containers' => [
-                            $container
+                            $container,
                         ]
-                    ]
+                    ])
                 ]
             ]
         ];
