@@ -19,9 +19,7 @@ class K8sDeployment extends AbstractK8sObject
         return 'extensions/v1beta';
     }
 
-    /** @return mixed[]
-     * @throws \TheAentMachine\Service\Exception\ServiceException
-     */
+    /** @return mixed[] */
     public static function serializeFromService(Service $service, ?string $name = null): array
     {
         $serviceName = $name ?? $service->getServiceName();

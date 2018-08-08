@@ -5,7 +5,7 @@ namespace TheAentMachine\AentKubernetes\Command;
 use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
-use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
+use TheAentMachine\AentKubernetes\Kubernetes\K8sUtils;
 use TheAentMachine\AentKubernetes\Kubernetes\KubernetesServiceDirectory;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sDeployment;
@@ -13,6 +13,8 @@ use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
+use TheAentMachine\Question\CommonValidators;
+use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
 use TheAentMachine\YamlTools\YamlTools;
 
@@ -37,7 +39,6 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         if (!$service->isForMyEnvType()) {
             return null;
         }
-        $k8sHelper = new K8sHelper($this->getAentHelper());
 
         $k8sDirName = Manifest::mustGetMetadata(CommonMetadata::KUBERNETES_DIRNAME_KEY);
         $this->getAentHelper()->title('Kubernetes: adding/updating a service');
@@ -56,67 +57,114 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
 
         // Deployment
         if (null === $service->getRequestMemory()) {
-            $service->setRequestMemory($k8sHelper->askForMemory($serviceName, true));
+            $requestMemory = $this->getAentHelper()->question("Memory request for <info>$serviceName</info>")
+                ->compulsory()
+                ->setHelpText('Amount of guaranteed memory (in bytes). A Container can exceed its memory request if the Node has memory available.')
+                ->setValidator(K8sUtils::getMemoryValidator())
+                ->ask();
+            $service->setRequestMemory($requestMemory);
         }
         if (null === $service->getRequestCpu()) {
-            $service->setRequestCpu($k8sHelper->askForCpu($serviceName, true));
+            $requestCpu = $this->getAentHelper()->question("CPU request for <info>$serviceName</info>")
+                ->compulsory()
+                ->setHelpText('Amount of guaranteed cpu units (fractional values are allowed e.g. 0.1 cpu). a Container can exceed its cpu request if the Node has available cpus.')
+                ->setValidator(K8sUtils::getCpuValidator())
+                ->ask();
+            $service->setRequestCpu($requestCpu);
         }
         if (null === $service->getLimitMemory()) {
-            $service->setLimitMemory($k8sHelper->askForMemory($serviceName, false));
+            $limitMemory = $this->getAentHelper()->question("Memory limit for <info>$serviceName</info>")
+                ->compulsory()
+                ->setHelpText('Amount of memory (in bytes) that a Container is not allowed to exceed. If a Container allocates more memory than its limit, the Container becomes a candidate for termination.')
+                ->setValidator(K8sUtils::getMemoryValidator())
+                ->ask();
+            $service->setLimitMemory($limitMemory);
         }
         if (null === $service->getLimitCpu()) {
-            $service->setLimitCpu($k8sHelper->askForCpu($serviceName, false));
+            $limitCpu = $this->getAentHelper()->question("CPU limit for <info>$serviceName</info>")
+                ->compulsory()
+                ->setHelpText('Max cpu units (fractional values are allowed e.g. 0.1 cpu) that a Container is allowed to use. The limit is guaranteed by throttling.')
+                ->setValidator(K8sUtils::getCpuValidator())
+                ->ask();
+            $service->setLimitCpu($limitCpu);
         }
         $deploymentArray = K8sDeployment::serializeFromService($service, $serviceName);
-        $deploymentFilename = $k8sServiceDir->getPath() . '/' . K8sDeployment::getKind() . '.yml';
+        $deploymentFilename = $k8sServiceDir->getPath() . '/deployment.yml';
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
 
         // Service
         $serviceArray = K8sService::serializeFromService($service, $serviceName);
-        $filename = $k8sServiceDir->getPath() . '/' . K8sService::getKind() . '.yml';
-        YamlTools::mergeContentIntoFile($serviceArray, $filename);
+        $filePath = $k8sServiceDir->getPath() . '/service.yml';
+        YamlTools::mergeContentIntoFile($serviceArray, $filePath);
 
         // Secret
-        if (count($service->getAllSharedSecret()) > 0) {
-            $secretObjName = $serviceName . '-secrets';
-            $newContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                [
-                    'secretFrom' => $secretObjName,
-                    'optional' => false
-                ]
-            ]]]]]]];
-            YamlTools::mergeContentIntoFile($newContent, $deploymentFilename);
+        if (!empty($service->getAllSharedSecret())) {
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, true);
+            foreach ($sharedSecretsMap as $containerId => $sharedSecrets) {
+                $secretObjName = 'default-secrets';
+                if ($containerId !== '') {
+                    $secretObjName = "secrets-$containerId";
+                }
+                $tmpService = new Service();
+                $tmpService->setServiceName($serviceName);
+                /** @var SharedEnvVariable $secret */
+                foreach ($sharedSecrets as $key => $secret) {
+                    $tmpService->addSharedSecret($key, $secret->getValue(), $secret->getComment(), $secret->getContainerId());
+                }
+                $secretArray = K8sSecret::serializeFromService($tmpService, $secretObjName);
+                $filePath = \dirname($k8sServiceDir->getPath()) . '/' . $secretObjName . '.yml';
+                YamlTools::mergeContentIntoFile($secretArray, $filePath);
 
-            $secretArray = K8sSecret::serializeFromService($service, $secretObjName);
-            $filename = $k8sServiceDir->getPath() . '/' . K8sSecret::getKind() . '.yml';
-            YamlTools::mergeContentIntoFile($secretArray, $filename);
+                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
+                    [
+                        'secretFrom' => $secretObjName,
+                        'optional' => false
+                    ]
+                ]]]]]]];
+                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
+            }
         }
 
         // ConfigMap
-        if (count($service->getAllSharedEnvVariable()) > 0) {
-            $configMapName = $serviceName . '-configMap';
-            $newContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
-                [
-                    'configMapRef' => $configMapName,
-                ]
-            ]]]]]]];
-            YamlTools::mergeContentIntoFile($newContent, $deploymentFilename);
+        if (!empty($service->getAllSharedEnvVariable())) {
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, true);
+            foreach ($sharedSecretsMap as $containerId => $sharedEnvVars) {
+                $configMapName = 'default-configMap';
+                if ($containerId !== '') {
+                    $configMapName = "configMap-$containerId";
+                }
+                $tmpService = new Service();
+                $tmpService->setServiceName($serviceName);
+                /** @var SharedEnvVariable $sharedEnvVar */
+                foreach ($sharedEnvVars as $key => $sharedEnvVar) {
+                    $tmpService->addSharedEnvVariable($key, $sharedEnvVar->getValue(), $sharedEnvVar->getComment(), $sharedEnvVar->getContainerId());
+                }
+                $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
+                $filePath = \dirname($k8sServiceDir->getPath()) . '/' . $configMapName . '.yml';
+                YamlTools::mergeContentIntoFile($secretArray, $filePath);
 
-            $secretArray = K8sConfigMap::serializeFromService($service, $configMapName);
-            $filename = $k8sServiceDir->getPath() . '/' . K8sConfigMap::getKind() . '.yml';
-            YamlTools::mergeContentIntoFile($secretArray, $filename);
+                $newDeploymentContent = ['spec' => ['template' => ['spec' => ['containers' => [0 => ['envFrom' => [
+                    [
+                        'configMapRef' => $configMapName,
+                    ]
+                ]]]]]]];
+                YamlTools::mergeContentIntoFile($newDeploymentContent, $deploymentFilename);
+            }
         }
 
         // Ingress
-        if (count($virtualHosts = $service->getVirtualHosts()) > 0) {
-            $ingressFilename = $k8sServiceDir->getPath() . '/' . K8sIngress::getKind() . '.yml';
+        if (!empty($virtualHosts = $service->getVirtualHosts())) {
+            $ingressFilename = $k8sServiceDir->getPath() . '/ingress.yml';
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
             foreach ($virtualHosts as $virtualHost) {
                 $port = (int)$virtualHost['port'];
                 $host = $virtualHost['host'] ?? null;
                 if (null === $host) {
-                    $host = $k8sHelper->askForHost($serviceName, $port);
+                    $host = $this->getAentHelper()->question("What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ")
+                        ->compulsory()
+                        ->setValidator(CommonValidators::getDomainNameValidator())
+                        ->ask();
                 }
                 $comment = $virtualHost['comment'] ?? null;
                 if ($comment !== null) {
