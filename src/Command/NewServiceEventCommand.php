@@ -2,7 +2,6 @@
 
 namespace TheAentMachine\AentKubernetes\Command;
 
-use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
@@ -136,7 +135,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
 
         // Ingress
         if (!empty($virtualHosts = $service->getVirtualHosts())) {
-            $baseDomainName = Aenthill::metadata('BASE_DOMAIN_NAME');
+            $baseDomainName = Manifest::mustGetMetadata('BASE_DOMAIN_NAME');
 
             $ingressFilename = $k8sServiceDir->getPath() . '/ingress.yml';
             $tmpService = new Service();
