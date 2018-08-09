@@ -28,7 +28,6 @@ class K8sIngress extends AbstractK8sObject
                 'http' => [
                     'paths' => [
                         [
-                            'path' => '/',
                             'backend' => [
                                 'serviceName' => $service->getServiceName(),
                                 'servicePort' => $virtualHost['port'],

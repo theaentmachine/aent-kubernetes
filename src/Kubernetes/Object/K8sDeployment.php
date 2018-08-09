@@ -43,7 +43,6 @@ class K8sDeployment extends AbstractK8sObject
         $container = [
             'name' => $serviceName,
             'image' => $service->getImage(),
-            'args' => $service->getCommand(),
             'imagePullPolicy' => 'Always',
             'resources' => [
                 'requests' => [
@@ -71,6 +70,9 @@ class K8sDeployment extends AbstractK8sObject
             $container['env'] = $env;
         }
 
+        if ($service->getCommand()) {
+            $container['args'] = $service->getCommand();
+        }
 
         // Secret
         $sharedSecrets = $service->getAllSharedSecret();
