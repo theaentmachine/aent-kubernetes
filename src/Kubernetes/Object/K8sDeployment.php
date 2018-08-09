@@ -29,15 +29,6 @@ class K8sDeployment extends AbstractK8sObject
     {
         $serviceName = $name ?? $service->getServiceName();
 
-        $imageEnvVars = [];
-        foreach ($service->getAllImageEnvVariable() as $key => $envVar) {
-            /** @var EnvVariable $envVar */
-            $imageEnvVars[] = new CommentedItem([
-                'name' => $key,
-                'value' => $envVar->getValue()
-            ], $envVar->getComment());
-        }
-
         $initContainers = [];
         foreach ($service->getDependsOn() as $n) {
             $initContainers[] = [
@@ -47,11 +38,11 @@ class K8sDeployment extends AbstractK8sObject
             ];
         }
 
+
         // Only 1 for the moment
-        $container = array_filter([
+        $container = [
             'name' => $serviceName,
             'image' => $service->getImage(),
-            'env' => $imageEnvVars,
             'imagePullPolicy' => 'Always',
             'resources' => [
                 'requests' => [
@@ -63,7 +54,22 @@ class K8sDeployment extends AbstractK8sObject
                     'cpu' => $service->getLimitCpu(),
                 ]
             ]
-        ]);
+        ];
+
+        // containerEnvVariables
+        $containerEnvVars = $service->getAllContainerEnvVariable();
+        if ($containerEnvVars) {
+            $env = [];
+            foreach ($service->getAllContainerEnvVariable() as $key => $envVar) {
+                /** @var EnvVariable $envVar */
+                $env[] = new CommentedItem([
+                    'name' => $key,
+                    'value' => $envVar->getValue()
+                ], $envVar->getComment());
+            }
+            $container['env'] = $env;
+        }
+
 
         // Secret
         $sharedSecrets = $service->getAllSharedSecret();
@@ -89,7 +95,7 @@ class K8sDeployment extends AbstractK8sObject
                 return K8sUtils::getConfigMapName($envVariable->getContainerId());
             }, $sharedEnvVars));
             $configMapNames = \array_unique($configMapNames);
-            $container['envFrom'] = array_merge($container['envFrom'], array_map(function (string $containerId) {
+            $container['envFrom'] = array_merge($container['envFrom'] ?? [], array_map(function (string $containerId) {
                 return [
                     'configMapRef' => [
                         'name' => $containerId

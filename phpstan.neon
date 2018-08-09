@@ -1,5 +1,5 @@
 parameters:
     ignoreErrors:
-     - "/Parameter #1 \\$arr1 of function array_merge expects array, array/"
+     # - "/Parameter #1 \\$arr1 of function array_merge expects array, array/"
 includes:
     - vendor/thecodingmachine/phpstan-strict-rules/phpstan-strict-rules.neon
