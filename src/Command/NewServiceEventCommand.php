@@ -10,6 +10,7 @@ use TheAentMachine\AentKubernetes\Kubernetes\KubernetesServiceDirectory;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sDeployment;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
+use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sPersistentVolumeClaim;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
@@ -17,6 +18,7 @@ use TheAentMachine\Question\CommonValidators;
 use TheAentMachine\Service\Enum\VolumeTypeEnum;
 use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
+use TheAentMachine\Service\Volume\NamedVolume;
 use TheAentMachine\Service\Volume\Volume;
 use TheAentMachine\YamlTools\YamlTools;
 
@@ -102,7 +104,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         // Secret
         $allSharedSecrets = $service->getAllSharedSecret();
         if (!empty($allSharedSecrets)) {
-            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, $allSharedSecrets);
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($allSharedSecrets);
             foreach ($sharedSecretsMap as $containerId => $sharedSecrets) {
                 $secretObjName = K8sUtils::getSecretName($containerId);
                 $tmpService = new Service();
@@ -120,7 +122,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         // ConfigMap
         $allSharedEnvVars = $service->getAllSharedEnvVariable();
         if (!empty($allSharedEnvVars)) {
-            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($service, $allSharedEnvVars);
+            $sharedSecretsMap = K8sUtils::mapSharedEnvVarsByContainerId($allSharedEnvVars);
             foreach ($sharedSecretsMap as $containerId => $sharedEnvVars) {
                 $configMapName = K8sUtils::getConfigMapName($containerId);
                 $tmpService = new Service();
@@ -147,12 +149,12 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $host = $virtualHost['host'] ?? null;
                 $hostPrefix = $virtualHost['hostPrefix'] ?? null;
                 if ($hostPrefix !== null) {
-                    $host = $hostPrefix.$baseDomainName;
+                    $host = $hostPrefix . $baseDomainName;
                 }
                 if (null === $host) {
                     $host = $this->getAentHelper()->question("What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ")
                         ->compulsory()
-                        ->setDefault($serviceName.$baseDomainName)
+                        ->setDefault($serviceName . $baseDomainName)
                         ->setValidator(CommonValidators::getDomainNameValidator())
                         ->ask();
                 }
@@ -166,13 +168,26 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         }
 
         // PVC
-        $bindVolumes = array_filter($service->getVolumes(), function (Volume $v) {
-            return $v->getType() === VolumeTypeEnum::BIND_VOLUME;
+        $namedVolumes = array_filter($service->getVolumes(), function (Volume $v) {
+            return $v->getType() === VolumeTypeEnum::NAMED_VOLUME;
         });
-        if ($bindVolumes) {
-            // TODO
+        if ($namedVolumes) {
+            /** @var NamedVolume $v */
+            foreach ($namedVolumes as $v) {
+                $requestStorage = $v->getRequestStorage();
+                if (null === $requestStorage) {
+                    $requestStorage = $this->getAentHelper()->question("Storage request for <info>$serviceName</info>")
+                        ->compulsory()
+                        ->setHelpText('Amount of guaranteed storage in bytes (e.g. 8G, 0.5Ti).')
+                        ->setValidator(K8sUtils::getStorageValidator())
+                        ->ask();
+                    $v = new NamedVolume($v->getSource(), $v->getTarget(), $v->isReadOnly(), $v->getComment(), $requestStorage);
+                }
+                $pvcArray = K8sPersistentVolumeClaim::serializeFromNamedVolume($v);
+                $filePath = $k8sServiceDir->getPath() . '/' . K8sUtils::getPvcName($v->getSource()) . '.yml';
+                YamlTools::mergeContentIntoFile($pvcArray, $filePath);
+            }
         }
-
 
         $this->output->writeln("Service <info>$serviceName</info> has been successfully added in <info>$k8sDirName</info>!");
         return null;

@@ -3,17 +3,15 @@
 namespace TheAentMachine\AentKubernetes\Kubernetes;
 
 use TheAentMachine\Service\Environment\SharedEnvVariable;
-use TheAentMachine\Service\Service;
 
 class K8sUtils
 {
 
     /**
-     * @param Service $service
      * @param array<string,SharedEnvVariable> $sharedEnvVars
      * @return array<string, array<string, SharedEnvVariable>>
      */
-    public static function mapSharedEnvVarsByContainerId(Service $service, array $sharedEnvVars): array
+    public static function mapSharedEnvVarsByContainerId(array $sharedEnvVars): array
     {
         $res = [];
         /**
@@ -75,7 +73,7 @@ class K8sUtils
     {
         $configMapName = 'default-configMap';
         if ($containerId) {
-            $configMapName = "configMap-$containerId";
+            $configMapName = "configmap-$containerId";
         }
         return $configMapName;
     }
@@ -87,5 +85,10 @@ class K8sUtils
             $secretObjName = "secrets-$containerId";
         }
         return $secretObjName;
+    }
+
+    public static function getPvcName(string $sourceName): string
+    {
+        return strtolower($sourceName) . '-pvc';
     }
 }

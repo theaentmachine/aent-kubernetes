@@ -13,9 +13,10 @@ class K8sConfigMap extends AbstractK8sObject
         return 'ConfigMap';
     }
 
+    /** @return mixed[] */
     public static function serializeFromService(Service $service, ?string $name = null): array
     {
-        $name = $name ?? $service->getServiceName() . '-configMap';
+        $name = $name ?? $service->getServiceName() . '-configmap';
         $res = [
             'apiVersion' => self::getApiVersion(),
             'kind' => self::getKind(),

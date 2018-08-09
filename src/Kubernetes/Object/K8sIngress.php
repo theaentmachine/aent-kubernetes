@@ -27,10 +27,12 @@ class K8sIngress extends AbstractK8sObject
                 'host' => new CommentedItem($virtualHost['host'], (string)$virtualHost['comment']),
                 'http' => [
                     'paths' => [
-                        'path' => '/',
-                        'backend' => [
-                            'serviceName' => $service->getServiceName(),
-                            'servicePort' => $virtualHost['port'],
+                        [
+                            'path' => '/',
+                            'backend' => [
+                                'serviceName' => $service->getServiceName(),
+                                'servicePort' => $virtualHost['port'],
+                            ]
                         ]
                     ]
                 ]
