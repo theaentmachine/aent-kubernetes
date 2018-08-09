@@ -13,11 +13,11 @@ class K8sSecret extends AbstractK8sObject
         return 'Secret';
     }
 
-    /** @return mixed[] */
-    public static function serializeFromService(Service $service, ?string $name = null): array
+    /**
+     * @return mixed[]
+     */
+    public static function serializeFromService(Service $service, string $name): array
     {
-
-        $name = $name ?? $service->getServiceName() . '-secrets';
         $res = [
             'apiVersion' => self::getApiVersion(),
             'kind' => self::getKind(),
