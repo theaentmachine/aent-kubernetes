@@ -67,6 +67,47 @@ class AddEventCommand extends AbstractEventCommand
 
         Manifest::addMetadata('BASE_DOMAIN_NAME', $baseDomainName);
 
+        $hasCertManager = $aentHelper->question('Does your cluster support CertManager? (this is used to get HTTPS certificates via LetsEncrypt)')
+            ->setDefault('n')
+            ->yesNoQuestion()
+            ->setHelpText('We highly recommend installing CertManager on your cluster to get automatic HTTPS certificates.')
+            ->compulsory()
+            ->ask();
+        $aentHelper->spacer();
+
+        if ($hasCertManager) {
+            Manifest::addMetadata('CERT_MANAGER', '1');
+            Manifest::addMetadata('USE_NODEPORT_FOR_INGRESS', '0');
+            Manifest::addMetadata('INGRESS_CLASS', 'nginx');
+        } else {
+            Manifest::addMetadata('CERT_MANAGER', '0');
+
+            $ingressClass = $aentHelper->question('Default Ingress class to use (keep empty to use cluster\'s default class)')
+                ->setDefault('')
+                ->setHelpText('You can alter the default Ingress controller used when an Ingress is created. This will add a "kubernetes.io/ingress.class" annotation in your Ingresses. Popular values include "nginx" and "gce".')
+                ->ask();
+            $aentHelper->spacer();
+
+            Manifest::addMetadata('INGRESS_CLASS', $ingressClass);
+
+            if ($ingressClass === 'gce') {
+                Manifest::addMetadata('USE_NODEPORT_FOR_INGRESS', '1');
+            } else {
+                $isGke = $aentHelper->question('Are you deploying on Google Kubernetes Engine?')
+                    ->setDefault('n')
+                    ->yesNoQuestion()
+                    ->setHelpText('Google Kubernetes engine used with the default GCE Ingress Controller has special requirements: all services exposed by Ingress must be NodePorts. Aenthill will take care of that for you.')
+                    ->compulsory()
+                    ->ask();
+
+                if ($isGke) {
+                    Manifest::addMetadata('USE_NODEPORT_FOR_INGRESS', '1');
+                } else {
+                    Manifest::addMetadata('USE_NODEPORT_FOR_INGRESS', '0');
+                }
+            }
+        }
+
         $CIAentID = $aentHelper->getCommonQuestions()->askForCI();
         if (null !== $CIAentID) {
             Aenthill::run($CIAentID, CommonEvents::ADD_EVENT);

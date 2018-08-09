@@ -97,7 +97,8 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
 
         // Service
-        $serviceArray = K8sService::serializeFromService($service, $serviceName);
+        $useNodePortForIngress = (bool) Manifest::mustGetMetadata('USE_NODEPORT_FOR_INGRESS');
+        $serviceArray = K8sService::serializeFromService($service, $useNodePortForIngress);
         $filePath = $k8sServiceDir->getPath() . '/service.yml';
         YamlTools::mergeContentIntoFile($serviceArray, $filePath);
 
@@ -164,7 +165,11 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 }
                 $tmpService->addVirtualHost((string)$host, $port, $comment);
             }
-            YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService), $ingressFilename);
+
+            $ingressClass = Manifest::mustGetMetadata('INGRESS_CLASS');
+            $useCertManager = (bool) Manifest::mustGetMetadata('CERT_MANAGER');
+
+            YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService, $ingressClass, $useCertManager), $ingressFilename);
         }
 
         // PVC

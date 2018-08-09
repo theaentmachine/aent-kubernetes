@@ -12,7 +12,7 @@ class K8sService extends AbstractK8sObject
     }
 
     /** @return mixed[] */
-    public static function serializeFromService(Service $service, ?string $name = null): array
+    public static function serializeFromService(Service $service, bool $useNodePortForIngress): array
     {
         $ports = [];
         foreach ($service->getInternalPorts() as $port) {
@@ -22,7 +22,7 @@ class K8sService extends AbstractK8sObject
             ];
         }
 
-        $name = $name ?? $service->getServiceName();
+        $name = $service->getServiceName();
         $res = [
             'apiVersion' => self::getApiVersion(),
             'kind' => self::getKind(),
@@ -37,6 +37,11 @@ class K8sService extends AbstractK8sObject
             ],
             'ports' => $ports,
         ]);
+
+        // Do we have a VirtualHost? If yes, we must go NodePort
+        if ($useNodePortForIngress && !empty($service->getVirtualHosts())) {
+            $res['spec']['type'] = 'NodePort';
+        }
 
         return $res;
     }

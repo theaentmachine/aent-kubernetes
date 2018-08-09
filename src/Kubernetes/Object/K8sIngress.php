@@ -19,7 +19,7 @@ class K8sIngress extends AbstractK8sObject
 
 
     /** @return mixed[] */
-    public static function serializeFromService(Service $service, ?string $name = null): array
+    public static function serializeFromService(Service $service, ?string $ingressClass, bool $isCertManager): array
     {
         $rules = [];
         foreach ($service->getVirtualHosts() as $virtualHost) {
@@ -39,7 +39,7 @@ class K8sIngress extends AbstractK8sObject
             ];
         }
 
-        $name = $name ?? $service->getServiceName() . '-ingress';
+        $name = $service->getServiceName() . '-ingress';
         $res = [
             'apiVersion' => self::getApiVersion(),
             'kind' => self::getKind(),
@@ -50,6 +50,17 @@ class K8sIngress extends AbstractK8sObject
                 'rules' => $rules,
             ]
         ];
+
+        if ($ingressClass) {
+            $res['metadata']['annotations']['kubernetes.io/ingress.class'] = $ingressClass;
+        }
+
+        if ($isCertManager) {
+            $res['metadata']['annotations']['ingress.kubernetes.io/ssl-redirect'] = 'true';
+            $res['metadata']['annotations']['kubernetes.io/tls-acme'] = 'true';
+            $res['metadata']['annotations']['certmanager.k8s.io/cluster-issuer'] = 'letsencrypt-prod-cluster-issuer';
+            $res['spec']['tls'][] = [ 'secretName' => 'tls-certificate' ];
+        }
 
         return $res;
     }
