@@ -43,6 +43,7 @@ class K8sDeployment extends AbstractK8sObject
         $container = [
             'name' => $serviceName,
             'image' => $service->getImage(),
+            'args' => $service->getCommand(),
             'imagePullPolicy' => 'Always',
             'resources' => [
                 'requests' => [
