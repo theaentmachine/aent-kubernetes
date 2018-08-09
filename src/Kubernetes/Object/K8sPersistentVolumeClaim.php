@@ -2,7 +2,8 @@
 
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
-use TheAentMachine\Service\Service;
+use TheAentMachine\AentKubernetes\Kubernetes\K8sUtils;
+use TheAentMachine\Service\Volume\NamedVolume;
 
 class K8sPersistentVolumeClaim extends AbstractK8sObject
 {
@@ -13,8 +14,22 @@ class K8sPersistentVolumeClaim extends AbstractK8sObject
     }
 
     /** @return mixed[] */
-    public static function serializeFromService(Service $service, ?string $name = null): array
+    public static function serializeFromNamedVolume(NamedVolume $namedVolume): array
     {
-        return [];
+        return [
+            'apiVersion' => self::getApiVersion(),
+            'kind' => self::getKind(),
+            'metadata' => [
+                'name' => K8sUtils::getPvcName($namedVolume->getSource())
+            ],
+            'spec' => [
+                'accessModes' => ['ReadWriteOnce'],
+                'resources' => [
+                    'requests' => [
+                        'storage' => $namedVolume->getRequestStorage(),
+                    ]
+                ]
+            ]
+        ];
     }
 }

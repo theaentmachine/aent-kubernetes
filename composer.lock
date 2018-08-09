@@ -744,12 +744,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/theaentmachine/aent-console.git",
-                "reference": "0416ce8ed27f0e68f0925f5f9d4a72a89e6a06b0"
+                "reference": "6da405a940a1b2a7507ef15da3ed1eb0164b3a28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/theaentmachine/aent-console/zipball/0416ce8ed27f0e68f0925f5f9d4a72a89e6a06b0",
-                "reference": "0416ce8ed27f0e68f0925f5f9d4a72a89e6a06b0",
+                "url": "https://api.github.com/repos/theaentmachine/aent-console/zipball/6da405a940a1b2a7507ef15da3ed1eb0164b3a28",
+                "reference": "6da405a940a1b2a7507ef15da3ed1eb0164b3a28",
                 "shasum": ""
             },
             "require": {
@@ -803,7 +803,7 @@
             ],
             "description": "A utility PHP package to create aents using Symfony console.",
             "homepage": "https://github.com/theaentmachine/aent-console",
-            "time": "2018-08-08T13:19:14+00:00"
+            "time": "2018-08-09T08:59:06+00:00"
         }
     ],
     "packages-dev": [
@@ -1274,16 +1274,16 @@
         },
         {
             "name": "nette/php-generator",
-            "version": "v3.0.4",
+            "version": "v3.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/php-generator.git",
-                "reference": "b381ecacbf5a0b5f99cc0b303d5b0578d409f446"
+                "reference": "ea90209c2e8a7cd087b2742ca553c047a8df5eff"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/php-generator/zipball/b381ecacbf5a0b5f99cc0b303d5b0578d409f446",
-                "reference": "b381ecacbf5a0b5f99cc0b303d5b0578d409f446",
+                "url": "https://api.github.com/repos/nette/php-generator/zipball/ea90209c2e8a7cd087b2742ca553c047a8df5eff",
+                "reference": "ea90209c2e8a7cd087b2742ca553c047a8df5eff",
                 "shasum": ""
             },
             "require": {
@@ -1332,7 +1332,7 @@
                 "php",
                 "scaffolding"
             ],
-            "time": "2018-04-26T16:48:20+00:00"
+            "time": "2018-08-09T14:32:27+00:00"
         },
         {
             "name": "nette/robot-loader",
