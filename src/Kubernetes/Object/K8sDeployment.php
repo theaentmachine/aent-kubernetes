@@ -113,7 +113,9 @@ class K8sDeployment extends AbstractK8sObject
             $volumes = \array_map(function (NamedVolume $v) {
                 return [
                     'name' => $v->getSource(),
-                    'persistentVolumeClaim' => K8sUtils::getPvcName($v->getSource()),
+                    'persistentVolumeClaim' => [
+                        'claimName' => K8sUtils::getPvcName($v->getSource()),
+                    ]
                 ];
             }, $namedVolumes);
         }
