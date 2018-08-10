@@ -181,7 +181,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             foreach ($namedVolumes as $v) {
                 $requestStorage = $v->getRequestStorage();
                 if (null === $requestStorage) {
-                    $requestStorage = $this->getAentHelper()->question("Storage request for <info>$serviceName</info>")
+                    $requestStorage = $this->getAentHelper()->question("Storage request for <info>{$v->getSource()}</info>")
                         ->compulsory()
                         ->setHelpText('Amount of guaranteed storage in bytes (e.g. 8G, 0.5Ti).')
                         ->setValidator(K8sUtils::getStorageValidator())
