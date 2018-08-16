@@ -110,8 +110,8 @@ class AddEventCommand extends AbstractEventCommand
 
         $CIAentID = $aentHelper->getCommonQuestions()->askForCI();
         if (null !== $CIAentID) {
-            $isVariableEnvironment = Aenthill::run($CIAentID, CommonEvents::ADD_EVENT)[0];
-            Manifest::addMetadata(CommonMetadata::IS_VARIABLE_ENVIRONMENT, $isVariableEnvironment);
+            $isSingleEnvironment = Aenthill::run($CIAentID, CommonEvents::ADD_EVENT, null)[0];
+            Manifest::addMetadata(CommonMetadata::SINGLE_ENVIRONMENT_KEY, $isSingleEnvironment);
 
             Aenthill::run($CIAentID, CommonEvents::NEW_DEPLOY_KUBERNETES_JOB_EVENT, $dirName);
             $aentHelper->spacer();

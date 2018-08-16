@@ -45,7 +45,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             return null;
         }
 
-        $isVariableEnvironment = (bool)Manifest::mustGetMetadata(CommonMetadata::IS_VARIABLE_ENVIRONMENT);
+        $isSingleEnvironment = (bool)Manifest::mustGetMetadata(CommonMetadata::SINGLE_ENVIRONMENT_KEY);
 
         $k8sDirName = Manifest::mustGetMetadata(CommonMetadata::KUBERNETES_DIRNAME_KEY);
         $this->getAentHelper()->title('Kubernetes: adding/updating a service');
@@ -149,7 +149,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         if (!empty($virtualHosts = $service->getVirtualHosts())) {
             $baseDomainName = Manifest::mustGetMetadata('BASE_DOMAIN_NAME');
 
-            $fileExtension = $isVariableEnvironment ? '.yml.template' : '.yml';
+            $fileExtension = $isSingleEnvironment ? '.yml' : '.yml.template';
             $ingressFilename = \dirname($k8sServiceDir->getPath()) . '/ingress' . $fileExtension;
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
@@ -158,14 +158,14 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $host = $virtualHost['host'] ?? null;
                 $hostPrefix = $virtualHost['hostPrefix'] ?? null;
                 if ($hostPrefix !== null) {
-                    $host = $isVariableEnvironment ?
-                        $hostPrefix . '.#ENVIRONMENT#' . $baseDomainName
-                        : $hostPrefix . $baseDomainName;
+                    $host = $isSingleEnvironment ?
+                        $hostPrefix .$baseDomainName
+                        : $hostPrefix . '.#ENVIRONMENT#' .  $baseDomainName;
                 }
                 if (null === $host) {
-                    $default = $isVariableEnvironment ?
-                        $serviceName . '.#ENVIRONMENT#' . $baseDomainName
-                        : $serviceName . $baseDomainName;
+                    $default = $isSingleEnvironment ?
+                        $serviceName .$baseDomainName
+                        : $serviceName . '.#ENVIRONMENT#' .  $baseDomainName;
                     $host = $this->getAentHelper()->question("What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ")
                         ->compulsory()
                         ->setDefault($default)
