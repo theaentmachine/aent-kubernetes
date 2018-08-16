@@ -2,6 +2,8 @@
 
 namespace TheAentMachine\AentKubernetes\Command;
 
+use TheAentMachine\Aenthill\Aenthill;
+use TheAentMachine\Aenthill\CommonDependencies;
 use TheAentMachine\Aenthill\CommonEvents;
 use TheAentMachine\Aenthill\CommonMetadata;
 use TheAentMachine\Aenthill\Manifest;
@@ -14,7 +16,6 @@ use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sPersistentVolumeClaim;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sSecret;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sService;
 use TheAentMachine\Command\AbstractJsonEventCommand;
-use TheAentMachine\Question\CommonValidators;
 use TheAentMachine\Service\Enum\VolumeTypeEnum;
 use TheAentMachine\Service\Environment\SharedEnvVariable;
 use TheAentMachine\Service\Service;
@@ -44,6 +45,8 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             return null;
         }
 
+        $isVariableEnvironment = (bool)Manifest::mustGetMetadata(CommonMetadata::IS_VARIABLE_ENVIRONMENT);
+
         $k8sDirName = Manifest::mustGetMetadata(CommonMetadata::KUBERNETES_DIRNAME_KEY);
         $this->getAentHelper()->title('Kubernetes: adding/updating a service');
 
@@ -58,6 +61,9 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         }
         $this->getAentHelper()->spacer();
 
+        if ($service->getNeedBuild()) {
+            $service = $this->newImageToBuild($service);
+        }
 
         // Deployment
         if (null === $service->getRequestMemory()) {
@@ -93,11 +99,12 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             $service->setLimitCpu($limitCpu);
         }
         $deploymentArray = K8sDeployment::serializeFromService($service, $serviceName);
-        $deploymentFilename = $k8sServiceDir->getPath() . '/deployment.yml';
+        $fileExtension = $service->getNeedBuild() ? '.yml.template' : '.yml';
+        $deploymentFilename = $k8sServiceDir->getPath() . '/deployment' . $fileExtension;
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
 
         // Service
-        $useNodePortForIngress = (bool) Manifest::mustGetMetadata('USE_NODEPORT_FOR_INGRESS');
+        $useNodePortForIngress = (bool)Manifest::mustGetMetadata('USE_NODEPORT_FOR_INGRESS');
         $serviceArray = K8sService::serializeFromService($service, $useNodePortForIngress);
         $filePath = $k8sServiceDir->getPath() . '/service.yml';
         YamlTools::mergeContentIntoFile($serviceArray, $filePath);
@@ -142,7 +149,8 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
         if (!empty($virtualHosts = $service->getVirtualHosts())) {
             $baseDomainName = Manifest::mustGetMetadata('BASE_DOMAIN_NAME');
 
-            $ingressFilename = $k8sServiceDir->getPath() . '/ingress.yml';
+            $fileExtension = $isVariableEnvironment ? '.yml.template' : '.yml';
+            $ingressFilename = \dirname($k8sServiceDir->getPath()) . '/ingress' . $fileExtension;
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
             foreach ($virtualHosts as $virtualHost) {
@@ -150,13 +158,24 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
                 $host = $virtualHost['host'] ?? null;
                 $hostPrefix = $virtualHost['hostPrefix'] ?? null;
                 if ($hostPrefix !== null) {
-                    $host = $hostPrefix . $baseDomainName;
+                    $host = $isVariableEnvironment ?
+                        $hostPrefix . '.#ENVIRONMENT#' . $baseDomainName
+                        : $hostPrefix . $baseDomainName;
                 }
                 if (null === $host) {
+                    $default = $isVariableEnvironment ?
+                        $serviceName . '.#ENVIRONMENT#' . $baseDomainName
+                        : $serviceName . $baseDomainName;
                     $host = $this->getAentHelper()->question("What is the domain name of your service <info>$serviceName</info> (port <info>$port</info>)? ")
                         ->compulsory()
-                        ->setDefault($serviceName . $baseDomainName)
-                        ->setValidator(CommonValidators::getDomainNameValidator())
+                        ->setDefault($default)
+                        ->setValidator(function (string $domainName) {
+                            $domainName = trim($domainName);
+                            if (!\preg_match('/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*(#ENVIRONMENT#\.)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/im', $domainName)) {
+                                throw new \InvalidArgumentException('Invalid value "' . $domainName . '". Hint: the domain name must not start with "http(s)://".');
+                            }
+                            return $domainName;
+                        })
                         ->ask();
                 }
                 $comment = $virtualHost['comment'] ?? null;
@@ -167,7 +186,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             }
 
             $ingressClass = Manifest::mustGetMetadata('INGRESS_CLASS');
-            $useCertManager = (bool) Manifest::mustGetMetadata('CERT_MANAGER');
+            $useCertManager = (bool)Manifest::mustGetMetadata('CERT_MANAGER');
 
             YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($tmpService, $ingressClass, $useCertManager), $ingressFilename);
         }
@@ -196,5 +215,40 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
 
         $this->output->writeln("Service <info>$serviceName</info> has been successfully added in <info>$k8sDirName</info>!");
         return null;
+    }
+
+    private function newImageToBuild(Service $service): Service
+    {
+        $imageBuilderAentID = Manifest::getDependency(CommonDependencies::IMAGE_BUILDER_KEY);
+        if (null === $imageBuilderAentID) {
+            return $service;
+        }
+
+        $repliedPayloads = Aenthill::runJson($imageBuilderAentID, CommonEvents::NEW_IMAGE_EVENT, $service->imageJsonSerialize());
+        $payload = \GuzzleHttp\json_decode($repliedPayloads[0], true);
+        $dockerfileName = $payload['dockerfileName'];
+        $this->getAentHelper()->spacer();
+
+        $CIAentID = Manifest::getDependency(CommonDependencies::CI_KEY);
+        if (null === $CIAentID) {
+            return $service;
+        }
+
+        $serviceName = $service->getServiceName();
+
+        $repliedPayloads = Aenthill::runJson($CIAentID, CommonEvents::NEW_BUILD_IMAGE_JOB_EVENT, [
+            'serviceName' => $serviceName,
+            'dockerfileName' => $dockerfileName,
+        ]);
+        $payload = \GuzzleHttp\json_decode($repliedPayloads[0], true);
+        $dockerImageName = $payload['dockerImageName'];
+        $service->setImage($dockerImageName);
+        $service->removeAllBindVolumes();
+
+        $this->getAentHelper()->spacer();
+        $this->output->writeln("Service <info>$serviceName</info> is now using image <info>$dockerImageName</info>!");
+        $this->getAentHelper()->spacer();
+
+        return $service;
     }
 }
