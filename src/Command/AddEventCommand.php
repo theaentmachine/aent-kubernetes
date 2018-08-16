@@ -20,9 +20,9 @@ class AddEventCommand extends AbstractEventCommand
     /**
      * @param null|string $payload
      * @return null|string
-     * @throws \TheAentMachine\Exception\CommonAentsException
      * @throws \TheAentMachine\Exception\ManifestException
      * @throws \TheAentMachine\Exception\MissingEnvironmentVariableException
+     * @throws \TheAentMachine\Exception\CommonAentsException
      */
     protected function executeEvent(?string $payload): ?string
     {
@@ -110,12 +110,15 @@ class AddEventCommand extends AbstractEventCommand
 
         $CIAentID = $aentHelper->getCommonQuestions()->askForCI();
         if (null !== $CIAentID) {
-            Aenthill::run($CIAentID, CommonEvents::ADD_EVENT);
+            $isSingleEnvironment = Aenthill::run($CIAentID, CommonEvents::ADD_EVENT, null)[0];
+            Manifest::addMetadata(CommonMetadata::SINGLE_ENVIRONMENT_KEY, $isSingleEnvironment);
+
             Aenthill::run($CIAentID, CommonEvents::NEW_DEPLOY_KUBERNETES_JOB_EVENT, $dirName);
             $aentHelper->spacer();
         }
 
         $aentHelper->getCommonQuestions()->askForImageBuilder();
+
         return null;
     }
 }

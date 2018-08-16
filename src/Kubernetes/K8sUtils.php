@@ -69,6 +69,17 @@ class K8sUtils
         };
     }
 
+    public static function getK8sDomainNameValidator(): \Closure
+    {
+        return function (string $value) {
+            $value = trim($value);
+            if (!\preg_match('/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*(#ENVIRONMENT#\.)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/im', $value)) {
+                throw new \InvalidArgumentException('Invalid value "' . $value . '". Hint: the domain name must not start with "http(s)://".');
+            }
+            return $value;
+        };
+    }
+
     public static function getConfigMapName(?string $containerId): string
     {
         $configMapName = 'default-configMap';
