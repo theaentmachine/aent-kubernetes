@@ -150,7 +150,7 @@ class NewServiceEventCommand extends AbstractJsonEventCommand
             $baseDomainName = Manifest::mustGetMetadata('BASE_DOMAIN_NAME');
 
             $fileExtension = $isSingleEnvironment ? '.yml' : '.yml.template';
-            $ingressFilename = \dirname($k8sServiceDir->getPath()) . '/ingress' . $fileExtension;
+            $ingressFilename = $k8sServiceDir->getPath() . '/ingress' . $fileExtension;
             $tmpService = new Service();
             $tmpService->setServiceName($serviceName);
             foreach ($virtualHosts as $virtualHost) {
