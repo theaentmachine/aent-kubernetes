@@ -5,7 +5,7 @@ namespace TheAentMachine\AentKubernetes\Kubernetes;
 use TheAentMachine\Service\Environment\SharedEnvVariable;
 use function Safe\preg_match;
 
-final class K8SHelper
+final class K8sHelper
 {
     /**
      * @param array<string,SharedEnvVariable> $sharedEnvVars
