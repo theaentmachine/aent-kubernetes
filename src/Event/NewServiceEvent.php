@@ -253,7 +253,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
             $subdomain = $this->prompt->getPromptHelper()->getSubdomain($serviceName, $port, $baseVirtualHost);
             $url = $this->withManyEnvironments ? $subdomain . '.#ENVIRONMENT#.' . $baseVirtualHost : $subdomain . '.' . $baseVirtualHost;
             $this->output->writeln("\n👌 Your service <info>$serviceName</info> will be accessible at <info>$url</info> (using port <info>$port</info>)!");
-            $hosts = [ 'url' => $url, 'port' => $port ];
+            $hosts[] = [ 'url' => $url, 'port' => $port ];
         }
         YamlTools::mergeContentIntoFile(K8sIngress::serializeFromService($service, $hosts, $this->context->getProvider()->getIngressClass(), $this->context->getProvider()->isCertManager()), $filePath);
     }

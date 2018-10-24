@@ -38,6 +38,7 @@ final class AddEvent extends AbstractOrchestratorAddEvent
         $this->prompt->printAltBlock("Kubernetes: setting up provider...");
         $this->context->setProvider($this->getProvider());
         $this->output->writeln(sprintf("\n👌 Alright, I'm going to use <info>%s</info> as a provider for your application!", $this->context->getProvider()->getName()));
+        return $this->context;
     }
 
     /**
