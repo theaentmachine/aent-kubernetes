@@ -2,7 +2,7 @@
 
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
-use TheAentMachine\AentKubernetes\Kubernetes\K8SHelper;
+use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\Service\Volume\NamedVolume;
 
 class K8sPersistentVolumeClaim extends AbstractK8sObject
@@ -20,7 +20,7 @@ class K8sPersistentVolumeClaim extends AbstractK8sObject
             'apiVersion' => self::getApiVersion(),
             'kind' => self::getKind(),
             'metadata' => [
-                'name' => K8SHelper::getPvcName($namedVolume->getSource())
+                'name' => K8sHelper::getPvcName($namedVolume->getSource())
             ],
             'spec' => [
                 'accessModes' => ['ReadWriteOnce'],
