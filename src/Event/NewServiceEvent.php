@@ -135,28 +135,30 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
      */
     private function addDefaultCPUAndMemory(int $CPUAndMemoryTypeIndex, Service $service): Service
     {
-        // TODO change values
         switch ($CPUAndMemoryTypeIndex) {
             case 0:
                 // Large
-                $service->setRequestCpu('100');
-                $service->setRequestMemory('100');
-                $service->setLimitCpu('100');
-                $service->setLimitMemory('100');
+                $service->setRequestCpu('4');
+                $service->setRequestMemory('4G');
+                $service->setLimitCpu('8');
+                $service->setLimitMemory('16G');
                 break;
             case 1:
                 // Medium
-                $service->setRequestCpu('100');
-                $service->setRequestMemory('100');
-                $service->setLimitCpu('100');
-                $service->setLimitMemory('100');
+                $service->setRequestCpu('1');
+                $service->setRequestMemory('1G');
+                $service->setLimitCpu('2');
+                $service->setLimitMemory('4G');
+                break;
+            case 2:
+                // Small
+                $service->setRequestCpu('0.5');
+                $service->setRequestMemory('256M');
+                $service->setLimitCpu('1');
+                $service->setLimitMemory('1G');
                 break;
             default:
-                // Small
-                $service->setRequestCpu('100');
-                $service->setRequestMemory('100');
-                $service->setLimitCpu('100');
-                $service->setLimitMemory('100');
+                throw new \RuntimeException('Unexpected profile');
         }
         return $service;
     }
