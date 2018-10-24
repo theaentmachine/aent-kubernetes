@@ -2,7 +2,7 @@
 
 namespace TheAentMachine\AentKubernetes\Kubernetes\Object;
 
-use TheAentMachine\AentKubernetes\Kubernetes\K8sUtils;
+use TheAentMachine\AentKubernetes\Kubernetes\K8SHelper;
 use TheAentMachine\Service\Enum\VolumeTypeEnum;
 use TheAentMachine\Service\Environment\EnvVariable;
 use TheAentMachine\Service\Environment\SharedEnvVariable;
@@ -78,7 +78,7 @@ class K8sDeployment extends AbstractK8sObject
         $sharedSecrets = $service->getAllSharedSecret();
         if ($sharedSecrets) {
             $secretNames = array_values(array_map(function (SharedEnvVariable $secret) {
-                return K8sUtils::getSecretName($secret->getContainerId());
+                return K8SHelper::getSecretName($secret->getContainerId());
             }, $sharedSecrets));
             $secretNames = \array_unique($secretNames);
             $container['envFrom'] = array_map(function (string $containerId) {
@@ -95,7 +95,7 @@ class K8sDeployment extends AbstractK8sObject
         $sharedEnvVars = $service->getAllSharedEnvVariable();
         if ($sharedEnvVars) {
             $configMapNames = array_values(array_map(function (SharedEnvVariable $envVariable) {
-                return K8sUtils::getConfigMapName($envVariable->getContainerId());
+                return K8SHelper::getConfigMapName($envVariable->getContainerId());
             }, $sharedEnvVars));
             $configMapNames = \array_unique($configMapNames);
             $container['envFrom'] = array_merge($container['envFrom'] ?? [], array_map(function (string $containerId) {
@@ -123,7 +123,7 @@ class K8sDeployment extends AbstractK8sObject
                 return [
                     'name' => $v->getSource(),
                     'persistentVolumeClaim' => [
-                        'claimName' => K8sUtils::getPvcName($v->getSource()),
+                        'claimName' => K8SHelper::getPvcName($v->getSource()),
                     ]
                 ];
             }, $namedVolumes);

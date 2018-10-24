@@ -18,19 +18,25 @@ class K8sIngress extends AbstractK8sObject
     }
 
 
-    /** @return mixed[] */
-    public static function serializeFromService(Service $service, ?string $ingressClass, bool $isCertManager): array
+    /**
+     * @param Service $service
+     * @param mixed[] $hosts
+     * @param null|string $ingressClass
+     * @param bool $isCertManager
+     * @return mixed[]
+     */
+    public static function serializeFromService(Service $service, array $hosts, ?string $ingressClass, bool $isCertManager): array
     {
         $rules = [];
-        foreach ($service->getVirtualHosts() as $virtualHost) {
+        foreach ($hosts as $host) {
             $rules[] = [
-                'host' => new CommentedItem($virtualHost['host'], (string)$virtualHost['comment']),
+                'host' => $host['url'],
                 'http' => [
                     'paths' => [
                         [
                             'backend' => [
                                 'serviceName' => $service->getServiceName(),
-                                'servicePort' => $virtualHost['port'],
+                                'servicePort' => $host['port'],
                             ]
                         ]
                     ]
