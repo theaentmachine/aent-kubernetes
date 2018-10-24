@@ -225,6 +225,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     /**
      * @param Service $service
      * @return void
+     * @throws FilesystemException
      */
     private function createServiceDeploymentFiles(Service $service): void
     {
@@ -240,6 +241,8 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     /**
      * @param Service $service
      * @return void
+     * @throws FilesystemException
+     * @throws StringsException
      */
     private function createIngressDeploymentFile(Service $service): void
     {
@@ -260,6 +263,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
 
     /**
      * @param NamedVolume[] $namedVolumes
+     * @throws FilesystemException
      */
     private function createPersistentVolumeClaimDeploymentFiles(array $namedVolumes): void
     {
@@ -278,6 +282,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     /**
      * @param Service $service
      * @return void
+     * @throws FilesystemException
      */
     private function createSharedSecretDeploymentFile(Service $service): void
     {
@@ -300,6 +305,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     /**
      * @param Service $service
      * @return void
+     * @throws FilesystemException
      */
     private function createSharedEnvVariableDeploymentFile(Service $service): void
     {

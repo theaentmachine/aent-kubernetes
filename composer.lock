@@ -511,16 +511,16 @@
         },
         {
             "name": "league/uri-components",
-            "version": "1.8.1",
+            "version": "1.8.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/uri-components.git",
-                "reference": "b796a9dc4f3cb51d3ac026cb0b159a02a24a8ad1"
+                "reference": "d0412fd730a54a8284009664188cf239070eae64"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/uri-components/zipball/b796a9dc4f3cb51d3ac026cb0b159a02a24a8ad1",
-                "reference": "b796a9dc4f3cb51d3ac026cb0b159a02a24a8ad1",
+                "url": "https://api.github.com/repos/thephpleague/uri-components/zipball/d0412fd730a54a8284009664188cf239070eae64",
+                "reference": "d0412fd730a54a8284009664188cf239070eae64",
                 "shasum": ""
             },
             "require": {
@@ -578,7 +578,7 @@
                 "url",
                 "userinfo"
             ],
-            "time": "2018-07-06T06:37:27+00:00"
+            "time": "2018-10-24T11:31:02+00:00"
         },
         {
             "name": "league/uri-hostname-parser",
@@ -2170,12 +2170,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/gulien/aent-console.git",
-                "reference": "c512f77c6cd7061c6f59ab1795e2d46c29680b0f"
+                "reference": "95e2d38c0c0e02510e8e5012a83fd0fcf8a7fc1b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/gulien/aent-console/zipball/c512f77c6cd7061c6f59ab1795e2d46c29680b0f",
-                "reference": "c512f77c6cd7061c6f59ab1795e2d46c29680b0f",
+                "url": "https://api.github.com/repos/gulien/aent-console/zipball/95e2d38c0c0e02510e8e5012a83fd0fcf8a7fc1b",
+                "reference": "95e2d38c0c0e02510e8e5012a83fd0fcf8a7fc1b",
                 "shasum": ""
             },
             "require": {
@@ -2195,6 +2195,7 @@
                 "phpstan/phpstan": "^0.10.3",
                 "phpunit/phpunit": "^7",
                 "squizlabs/php_codesniffer": "^3.2",
+                "thecodingmachine/phpstan-safe-rule": "^0.1.0@dev",
                 "thecodingmachine/phpstan-strict-rules": "^0.10.3"
             },
             "type": "library",
@@ -2257,7 +2258,7 @@
             "support": {
                 "source": "https://github.com/gulien/aent-console/tree/master"
             },
-            "time": "2018-10-24T07:46:33+00:00"
+            "time": "2018-10-24T12:51:41+00:00"
         },
         {
             "name": "thecodingmachine/safe",
