@@ -3,10 +3,10 @@
 namespace TheAentMachine\AentKubernetes\Kubernetes;
 
 use TheAentMachine\Service\Environment\SharedEnvVariable;
+use function Safe\preg_match;
 
-class K8sUtils
+final class K8SHelper
 {
-
     /**
      * @param array<string,SharedEnvVariable> $sharedEnvVars
      * @return array<string, array<string, SharedEnvVariable>>
@@ -27,11 +27,14 @@ class K8sUtils
         return $res;
     }
 
+    /**
+     * @return \Closure
+     */
     public static function getCpuValidator(): \Closure
     {
         return function (string $value) {
             $value = trim($value);
-            if (!\preg_match('/^(\d+[.])?\d+[m]?$/', $value)) {
+            if (!preg_match('/^(\d+[.])?\d+[m]?$/', $value)) {
                 throw new \InvalidArgumentException("Invalid value \"$value\"." . PHP_EOL
                     . 'Hint: The CPU resource is measured in cpu units. Fractional values are allowed.' . PHP_EOL
                     . 'You can use the suffix m to mean mili. For example 100m cpu is 100 milicpu, and is the same as 0.1 cpu.' . PHP_EOL
@@ -41,11 +44,14 @@ class K8sUtils
         };
     }
 
+    /**
+     * @return \Closure
+     */
     public static function getMemoryValidator(): \Closure
     {
         return function (string $value) {
             $value = trim($value);
-            if (!\preg_match('/^(\d+[.])?\d+([EPTGMK][i]?)?$/', $value)) {
+            if (!preg_match('/^(\d+[.])?\d+([EPTGMK][i]?)?$/', $value)) {
                 throw new \InvalidArgumentException("Invalid value \"$value\"." . PHP_EOL
                     . 'Hint: The memory resource is measured in bytes.' . PHP_EOL
                     . 'You can express memory as a plain integer or a fixed-point integer with one of these suffixes:' . PHP_EOL
@@ -55,11 +61,14 @@ class K8sUtils
         };
     }
 
+    /**
+     * @return \Closure
+     */
     public static function getStorageValidator(): \Closure
     {
         return function (string $value) {
             $value = trim($value);
-            if (!\preg_match('/^(\d+[.])?\d+([EPTGMK][i]?)?$/', $value)) {
+            if (!preg_match('/^(\d+[.])?\d+([EPTGMK][i]?)?$/', $value)) {
                 throw new \InvalidArgumentException("Invalid value \"$value\"." . PHP_EOL
                     . 'Hint: The storage resource is measured in bytes.' . PHP_EOL
                     . 'You can express storage as a plain integer or a fixed-point integer with one of these suffixes:' . PHP_EOL
@@ -69,17 +78,24 @@ class K8sUtils
         };
     }
 
+    /**
+     * @return \Closure
+     */
     public static function getK8sDomainNameValidator(): \Closure
     {
         return function (string $value) {
             $value = trim($value);
-            if (!\preg_match('/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*(#ENVIRONMENT#\.)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/im', $value)) {
+            if (!preg_match('/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*(#ENVIRONMENT#\.)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/im', $value)) {
                 throw new \InvalidArgumentException('Invalid value "' . $value . '". Hint: the domain name must not start with "http(s)://".');
             }
             return $value;
         };
     }
 
+    /**
+     * @param null|string $containerId
+     * @return string
+     */
     public static function getConfigMapName(?string $containerId): string
     {
         $configMapName = 'default-configMap';
@@ -89,6 +105,10 @@ class K8sUtils
         return $configMapName;
     }
 
+    /**
+     * @param null|string $containerId
+     * @return string
+     */
     public static function getSecretName(?string $containerId): string
     {
         $secretObjName = 'default-secrets';

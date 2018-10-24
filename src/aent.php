@@ -3,15 +3,9 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use TheAentMachine\AentApplication;
-use TheAentMachine\AentKubernetes\Command\AddEventCommand;
-use TheAentMachine\AentKubernetes\Command\NewServiceEventCommand;
-use TheAentMachine\Command\EnvironmentEventCommand;
+use \TheAentMachine\Aent\OrchestratorAent;
+use \TheAentMachine\AentKubernetes\Event\AddEvent;
+use \TheAentMachine\AentKubernetes\Event\NewServiceEvent;
 
-$application = new AentApplication();
-
-$application->add(new AddEventCommand());
-$application->add(new NewServiceEventCommand());
-$application->add(new EnvironmentEventCommand());
-
+$application = new OrchestratorAent('Kubernetes', new AddEvent(), new NewServiceEvent());
 $application->run();
