@@ -7,7 +7,7 @@ use Safe\Exceptions\StringsException;
 use Symfony\Component\Filesystem\Filesystem;
 use TheAentMachine\Aent\Event\Orchestrator\AbstractOrchestratorNewServiceEvent;
 use TheAentMachine\AentKubernetes\Context\KubernetesContext;
-use TheAentMachine\AentKubernetes\Kubernetes\K8SHelper;
+use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sDeployment;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sIngress;
@@ -185,7 +185,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $text = "\nCPU request for <info>$serviceName</info>";
         $helpText = "Amount of guaranteed CPU units (fractional values are allowed e.g. 0.1 cpu). A container may exceed its CPU request if the Node has available CPUs.";
-        return $this->prompt->input($text, $helpText, null, true, K8SHelper::getCpuValidator()) ?? '';
+        return $this->prompt->input($text, $helpText, null, true, K8sHelper::getCpuValidator()) ?? '';
     }
 
     /**
@@ -197,7 +197,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $text = "\nMemory request for <info>$serviceName</info>";
         $helpText = "Amount of guaranteed memory (in bytes). A container may exceed its memory request if the Node has memory available.";
-        return $this->prompt->input($text, $helpText, null, true, K8SHelper::getMemoryValidator()) ?? '';
+        return $this->prompt->input($text, $helpText, null, true, K8sHelper::getMemoryValidator()) ?? '';
     }
 
     /**
@@ -209,7 +209,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $text = "\nCPU limit for <info>$serviceName</info>";
         $helpText = "Max CPU units (fractional values are allowed e.g. 0.1 cpu) that a container is allowed to use. The limit is guaranteed by throttling.";
-        return $this->prompt->input($text, $helpText, null, true, K8SHelper::getCpuValidator()) ?? '';
+        return $this->prompt->input($text, $helpText, null, true, K8sHelper::getCpuValidator()) ?? '';
     }
 
     /**
@@ -221,7 +221,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $text = "\nMemory limit for <info>$serviceName</info>";
         $helpText = "Amount of memory (in bytes) that a container is not allowed to exceed. If a container allocates more memory than its limit, the container becomes a candidate for termination.";
-        return $this->prompt->input($text, $helpText, null, true, K8SHelper::getMemoryValidator()) ?? '';
+        return $this->prompt->input($text, $helpText, null, true, K8sHelper::getMemoryValidator()) ?? '';
     }
 
     /**
@@ -273,10 +273,10 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         foreach ($namedVolumes as $v) {
             $text = "Storage request for <info>{$v->getSource()}</info>";
             $helpText = 'Amount of guaranteed storage in bytes (e.g. 8G, 0.5Ti).';
-            $requestStorage = $this->prompt->input($text, $helpText, null, true, K8SHelper::getStorageValidator()) ?? '';
+            $requestStorage = $this->prompt->input($text, $helpText, null, true, K8sHelper::getStorageValidator()) ?? '';
             $v = new NamedVolume($v->getSource(), $v->getTarget(), $v->isReadOnly(), $v->getComment(), $requestStorage);
             $pvcArray = K8sPersistentVolumeClaim::serializeFromNamedVolume($v);
-            $filePath = $this->deploymentDirectoryPath . '/' . K8SHelper::getPvcName($v->getSource()) . '.yml';
+            $filePath = $this->deploymentDirectoryPath . '/' . K8sHelper::getPvcName($v->getSource()) . '.yml';
             YamlTools::mergeContentIntoFile($pvcArray, $filePath);
         }
     }
@@ -289,9 +289,9 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     private function createSharedSecretDeploymentFile(Service $service): void
     {
         $allSharedSecrets = $service->getAllSharedSecret();
-        $sharedSecretsMap = K8SHelper::mapSharedEnvVarsByContainerId($allSharedSecrets);
+        $sharedSecretsMap = K8sHelper::mapSharedEnvVarsByContainerId($allSharedSecrets);
         foreach ($sharedSecretsMap as $containerId => $sharedSecrets) {
-            $secretObjName = K8SHelper::getSecretName($containerId);
+            $secretObjName = K8sHelper::getSecretName($containerId);
             $tmpService = new Service();
             $tmpService->setServiceName($service->getServiceName());
             /** @var SharedEnvVariable $secret */
@@ -312,9 +312,9 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     private function createSharedEnvVariableDeploymentFile(Service $service): void
     {
         $allSharedEnvVars = $service->getAllSharedEnvVariable();
-        $sharedSecretsMap = K8SHelper::mapSharedEnvVarsByContainerId($allSharedEnvVars);
+        $sharedSecretsMap = K8sHelper::mapSharedEnvVarsByContainerId($allSharedEnvVars);
         foreach ($sharedSecretsMap as $containerId => $sharedEnvVars) {
-            $configMapName = K8SHelper::getConfigMapName($containerId);
+            $configMapName = K8sHelper::getConfigMapName($containerId);
             $tmpService = new Service();
             $tmpService->setServiceName($service->getServiceName());
             /** @var SharedEnvVariable $sharedEnvVar */
