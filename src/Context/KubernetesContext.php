@@ -28,7 +28,7 @@ final class KubernetesContext extends BaseOrchestratorContext
      */
     public function __construct(BaseOrchestratorContext $context)
     {
-        parent::__construct($context->getEnvironmentType(), $context->getEnvironmentName(), $context->getBaseVirtualHost());
+        parent::__construct($context->getEnvironmentType(), $context->getEnvironmentName(), $context->getBaseVirtualHost(), $context->isSingleEnvironment());
         $this->projectDir = Pheromone::getContainerProjectDirectory();
         $this->directoryName = sprintf("kubernetes-%s", $context->getEnvironmentName());
     }
