@@ -6,6 +6,7 @@ use Safe\Exceptions\FilesystemException;
 use Safe\Exceptions\StringsException;
 use Symfony\Component\Filesystem\Filesystem;
 use TheAentMachine\Aent\Event\Orchestrator\AbstractOrchestratorNewServiceEvent;
+use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\AentKubernetes\Context\KubernetesContext;
 use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
@@ -30,9 +31,6 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     /** @var KubernetesContext */
     private $context;
 
-    /** @var bool */
-    private $withManyEnvironments;
-
     /** @var string */
     private $deploymentDirectoryPath;
 
@@ -53,11 +51,10 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     protected function finalizeService(Service $service): void
     {
         $this->context = KubernetesContext::fromMetadata();
-        $this->withManyEnvironments = !$this->context->isSingleEnvironment();
         $this->prompt->printAltBlock(sprintf("Kubernetes: creating deployment files directory for service %s...", $service->getServiceName()));
         $this->deploymentDirectoryPath = $this->createDeploymentDirectory($service);
         $this->output->writeln(sprintf("👌 Alright, I've created the directory <info>%s</info>!", $service->getServiceName()));
-        $this->prompt->printAltBlock("Kubernetes: setting up request and limit for memory and CPU %s...");
+        $this->prompt->printAltBlock("Kubernetes: setting up request and limit for memory and CPU...");
         $service = $this->processCPUAndMemoryType($service);
         $this->prompt->printAltBlock("Kubernetes: creating service deployment files...");
         $this->createServiceDeploymentFiles($service);
@@ -232,7 +229,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     private function createServiceDeploymentFiles(Service $service): void
     {
         $deploymentArray = K8sDeployment::serializeFromService($service, $service->getServiceName());
-        $fileExtension = $this->withManyEnvironments ? '.yml.template' : '.yml';
+        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
         $deploymentFilename = $this->deploymentDirectoryPath . '/deployment' . $fileExtension;
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
         $serviceArray = K8sService::serializeFromService($service, $this->context->getProvider()->isUseNodePortForIngress());
@@ -251,12 +248,12 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $virtualHosts = $service->getVirtualHosts();
         $baseVirtualHost = $this->context->getBaseVirtualHost();
-        $fileExtension = $this->withManyEnvironments ? '.yml.template' : '.yml';
+        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
         $filePath = \dirname($this->deploymentDirectoryPath) . '/ingress' . $fileExtension;
         $hosts = [];
         foreach ($virtualHosts as $index => $port) {
             $subdomain = $this->prompt->getPromptHelper()->getSubdomain($serviceName, $port, $baseVirtualHost);
-            $url = $this->withManyEnvironments ? $subdomain . '.#ENVIRONMENT#.' . $baseVirtualHost : $subdomain . '.' . $baseVirtualHost;
+            $url = $this->context->isSingleEnvironment() ? $subdomain . '.' . $baseVirtualHost : $subdomain . '.#ENVIRONMENT#.' . $baseVirtualHost;
             $this->output->writeln("\n👌 Your service <info>$serviceName</info> will be accessible at <info>$url</info> (using port <info>$port</info>)!");
             $hosts[] = [ 'url' => $url, 'port' => $port ];
         }
