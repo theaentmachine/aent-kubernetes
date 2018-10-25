@@ -53,7 +53,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     protected function finalizeService(Service $service): void
     {
         $this->context = KubernetesContext::fromMetadata();
-        $this->withManyEnvironments = strpos($service->getImage() ?? '', '#ENVIRONMENT#') !== false;
+        $this->withManyEnvironments = !$this->context->isSingleEnvironment();
         $this->prompt->printAltBlock(sprintf("Kubernetes: creating deployment files directory for service %s...", $service->getServiceName()));
         $this->deploymentDirectoryPath = $this->createDeploymentDirectory($service);
         $this->output->writeln(sprintf("👌 Alright, I've created the directory <info>%s</info>!", $service->getServiceName()));
