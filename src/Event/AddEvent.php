@@ -10,6 +10,7 @@ use TheAentMachine\Aent\Context\ContextInterface;
 use TheAentMachine\Aent\Event\Orchestrator\AbstractOrchestratorAddEvent;
 use TheAentMachine\Aent\K8SProvider\Provider;
 use TheAentMachine\Aent\Payload\CI\KubernetesDeployJobPayload;
+use TheAentMachine\Aent\Payload\CI\KubernetesReplyDeployJobPayload;
 use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\AentKubernetes\Context\KubernetesContext;
 use function Safe\chown;
@@ -49,7 +50,10 @@ final class AddEvent extends AbstractOrchestratorAddEvent
     {
         $this->prompt->printAltBlock("Kubernetes: adding deploy job in CI/CD...");
         $payload = new KubernetesDeployJobPayload($this->context->getDirectoryName(), $this->context->getProvider());
-        Aenthill::runJson(KubernetesContext::CI_DEPENDENCY_KEY, 'KUBERNETES_DEPLOY_JOB', $payload->toArray());
+        $response = Aenthill::runJson(KubernetesContext::CI_DEPENDENCY_KEY, 'KUBERNETES_DEPLOY_JOB', $payload->toArray());
+        $assoc = \GuzzleHttp\json_decode($response[0], true);
+        $replyPayload = KubernetesReplyDeployJobPayload::fromArray($assoc);
+        $this->context->setSingleEnvironment(!$replyPayload->isWithManyEnvironments());
         return $this->context;
     }
 
