@@ -122,7 +122,9 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $helpText .= "\n - <info>Small</info>: request CPU = 0.5, request memory = 256M, limit CPU = 1, limit memory = 1G";
         $helpText .= "\n - <info>Medium</info>: request CPU = 1, request memory = 1G, limit CPU = 2, limit memory = 4G";
         $helpText .= "\n - <info>Large</info>: request CPU = 4, request memory = 4G, limit CPU = 8, limit memory = 16G";
-        $response = $this->prompt->select("\nYour profile type for <info>$serviceName</info>", $this->CPUandMemoryTypes, $helpText, null, true);
+        $environmentName = $this->context->getEnvironmentName();
+        $environmentType = $this->context->getEnvironmentType();
+        $response = $this->prompt->select("\nYour profile type for <info>$serviceName</info> of your <info>$environmentType</info> environment <info>$environmentName</info>", $this->CPUandMemoryTypes, $helpText, null, true);
         $CPUAndMemoryTypeIndex = \array_search($response, $this->CPUandMemoryTypes);
         return $CPUAndMemoryTypeIndex !== false ? (int)$CPUAndMemoryTypeIndex : 3;
     }
