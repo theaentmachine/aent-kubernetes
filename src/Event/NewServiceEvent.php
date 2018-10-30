@@ -233,7 +233,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     private function createServiceDeploymentFiles(Service $service): void
     {
         $deploymentArray = K8sDeployment::serializeFromService($service, $service->getServiceName());
-        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
+        $fileExtension = $this->context->isSingleEnvironment() ? '.yml': '.yml.template';
         $deploymentFilename = $this->deploymentDirectoryPath . '/deployment' . $fileExtension;
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
         $serviceArray = K8sService::serializeFromService($service, $this->context->getProvider()->isUseNodePortForIngress());
@@ -252,7 +252,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $virtualHosts = $service->getVirtualHosts();
         $baseVirtualHost = $this->context->getBaseVirtualHost();
-        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
+        $fileExtension = $this->context->isSingleEnvironment() ? '.yml': '.yml.template';
         $filePath = \dirname($this->deploymentDirectoryPath) . '/ingress' . $fileExtension;
         $hosts = [];
         foreach ($virtualHosts as $index => $port) {
