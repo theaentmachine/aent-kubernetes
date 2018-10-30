@@ -6,7 +6,6 @@ use Safe\Exceptions\FilesystemException;
 use Safe\Exceptions\StringsException;
 use Symfony\Component\Filesystem\Filesystem;
 use TheAentMachine\Aent\Event\Orchestrator\AbstractOrchestratorNewServiceEvent;
-use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\AentKubernetes\Context\KubernetesContext;
 use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
@@ -120,7 +119,12 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     {
         $serviceName = $service->getServiceName();
         $helpText = 'We provide a bunch of defaults CPU and memory profiles which fit for most cases. By choosing the custom option, you may define your own profile.';
-        $response = $this->prompt->select("\nYour profile type for <info>$serviceName</info>", $this->CPUandMemoryTypes, $helpText, null, true);
+        $helpText .= "\n - <info>Small</info>: request CPU = 0.5, request memory = 256M, limit CPU = 1, limit memory = 1G";
+        $helpText .= "\n - <info>Medium</info>: request CPU = 1, request memory = 1G, limit CPU = 2, limit memory = 4G";
+        $helpText .= "\n - <info>Large</info>: request CPU = 4, request memory = 4G, limit CPU = 8, limit memory = 16G";
+        $environmentName = $this->context->getEnvironmentName();
+        $environmentType = $this->context->getEnvironmentType();
+        $response = $this->prompt->select("\nYour profile type for <info>$serviceName</info> of your <info>$environmentType</info> environment <info>$environmentName</info>", $this->CPUandMemoryTypes, $helpText, null, true);
         $CPUAndMemoryTypeIndex = \array_search($response, $this->CPUandMemoryTypes);
         return $CPUAndMemoryTypeIndex !== false ? (int)$CPUAndMemoryTypeIndex : 3;
     }
@@ -229,7 +233,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     private function createServiceDeploymentFiles(Service $service): void
     {
         $deploymentArray = K8sDeployment::serializeFromService($service, $service->getServiceName());
-        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
+        $fileExtension = $this->context->isSingleEnvironment() ? '.yml': '.yml.template';
         $deploymentFilename = $this->deploymentDirectoryPath . '/deployment' . $fileExtension;
         YamlTools::mergeContentIntoFile($deploymentArray, $deploymentFilename);
         $serviceArray = K8sService::serializeFromService($service, $this->context->getProvider()->isUseNodePortForIngress());
@@ -248,7 +252,7 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
         $serviceName = $service->getServiceName();
         $virtualHosts = $service->getVirtualHosts();
         $baseVirtualHost = $this->context->getBaseVirtualHost();
-        $fileExtension = $this->context->isSingleEnvironment() ? 'yml': '.yml.template';
+        $fileExtension = $this->context->isSingleEnvironment() ? '.yml': '.yml.template';
         $filePath = \dirname($this->deploymentDirectoryPath) . '/ingress' . $fileExtension;
         $hosts = [];
         foreach ($virtualHosts as $index => $port) {
