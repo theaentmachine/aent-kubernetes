@@ -6,7 +6,6 @@ use Safe\Exceptions\FilesystemException;
 use Safe\Exceptions\StringsException;
 use Symfony\Component\Filesystem\Filesystem;
 use TheAentMachine\Aent\Event\Orchestrator\AbstractOrchestratorNewServiceEvent;
-use TheAentMachine\Aenthill\Aenthill;
 use TheAentMachine\AentKubernetes\Context\KubernetesContext;
 use TheAentMachine\AentKubernetes\Kubernetes\K8sHelper;
 use TheAentMachine\AentKubernetes\Kubernetes\Object\K8sConfigMap;
@@ -120,6 +119,9 @@ final class NewServiceEvent extends AbstractOrchestratorNewServiceEvent
     {
         $serviceName = $service->getServiceName();
         $helpText = 'We provide a bunch of defaults CPU and memory profiles which fit for most cases. By choosing the custom option, you may define your own profile.';
+        $helpText .= "\n - <info>Small</info>: request CPU = 0.5, request memory = 256M, limit CPU = 1, limit memory = 1G";
+        $helpText .= "\n - <info>Medium</info>: request CPU = 1, request memory = 1G, limit CPU = 2, limit memory = 4G";
+        $helpText .= "\n - <info>Large</info>: request CPU = 4, request memory = 4G, limit CPU = 8, limit memory = 16G";
         $response = $this->prompt->select("\nYour profile type for <info>$serviceName</info>", $this->CPUandMemoryTypes, $helpText, null, true);
         $CPUAndMemoryTypeIndex = \array_search($response, $this->CPUandMemoryTypes);
         return $CPUAndMemoryTypeIndex !== false ? (int)$CPUAndMemoryTypeIndex : 3;
