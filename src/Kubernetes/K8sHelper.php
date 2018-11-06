@@ -120,6 +120,9 @@ final class K8sHelper
 
     public static function getPvcName(string $sourceName): string
     {
-        return strtolower($sourceName) . '-pvc';
+        $name = 'pvc-' . strtolower($sourceName) . '-pvc';
+        $name = str_replace('_', '-', $name);
+        $name = str_replace('/', '-', $name);
+        return $name;
     }
 }
